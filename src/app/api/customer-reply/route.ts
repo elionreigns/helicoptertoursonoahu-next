@@ -57,12 +57,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Find booking by customer email
-    const { data: bookings, error: bookingError } = await supabase
+    const queryResult = await supabase
       .from('bookings')
       .select('*')
       .eq('customer_email', validated.fromEmail)
       .order('created_at', { ascending: false })
       .limit(1);
+
+    const bookings = queryResult.data as Booking[] | null;
+    const bookingError = queryResult.error;
 
     if (bookingError || !bookings || bookings.length === 0) {
       // No existing booking - treat as new inquiry
@@ -124,7 +127,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Update existing booking with new information
-    const booking = bookings[0];
+    if (!bookings || bookings.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+
+    const booking: Booking = bookings[0] as Booking;
     const updateData: any = {
       updated_at: new Date().toISOString(),
     };
@@ -140,11 +150,12 @@ export async function POST(request: NextRequest) {
       if (analysis.extractedData.specialRequests) updateData.special_requests = analysis.extractedData.specialRequests;
     }
 
-    // Update metadata with customer message
+    // Update metadata with customer message (safely handle JSONB metadata)
+    const existingMetadata: Record<string, any> = (booking.metadata as Record<string, any> | null) ?? {};
     updateData.metadata = {
-      ...(booking.metadata as object || {}),
+      ...existingMetadata,
       customerMessages: [
-        ...((booking.metadata as any)?.customerMessages || []),
+        ...(Array.isArray(existingMetadata.customerMessages) ? existingMetadata.customerMessages : []),
         {
           content: validated.emailContent,
           timestamp: new Date().toISOString(),
