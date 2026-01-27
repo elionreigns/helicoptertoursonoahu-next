@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase, type Booking } from '@/lib/supabaseClient';
+import { supabase, type Booking, type BookingUpdate } from '@/lib/supabaseClient';
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail, sendBookingRequestToOperator } from '@/lib/email';
@@ -135,7 +135,9 @@ export async function POST(request: NextRequest) {
     }
 
     const booking: Booking = bookings[0] as Booking;
-    const updateData: any = {
+    
+    // Build update data with proper typing
+    const updateData: BookingUpdate = {
       updated_at: new Date().toISOString(),
     };
 
@@ -151,7 +153,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Update metadata with customer message (safely handle JSONB metadata)
-    const existingMetadata: Record<string, any> = (booking.metadata as Record<string, any> | null) ?? {};
+    // booking.metadata is Json | null, so we need to cast it safely
+    const existingMetadata = booking.metadata 
+      ? (booking.metadata as Record<string, any>)
+      : ({} as Record<string, any>);
+    
     updateData.metadata = {
       ...existingMetadata,
       customerMessages: [
@@ -161,8 +167,9 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString(),
         },
       ],
-    };
+    } as any; // JSONB type requires any for complex objects
 
+    // Use type assertion for update to work around Supabase type inference limitation
     await supabase
       .from('bookings')
       .update(updateData as any)
