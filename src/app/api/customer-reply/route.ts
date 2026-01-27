@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(1);
 
-    const bookings: BookingsRow[] | null = rows;
+    const bookings: BookingsRow[] | null = (rows as BookingsRow[] | null) ?? null;
     if (queryError || !bookings || bookings.length === 0) {
       if (analysis.isBookingRequest && analysis.extractedData) {
         const insertData: BookingsInsert = {

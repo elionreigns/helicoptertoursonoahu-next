@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import type { Database } from './database.types';
-import type { BookingsInsert, BookingsUpdate } from './database.types';
+import type { BookingsInsert, BookingsUpdate, BookingsRow } from './database.types';
 
 /**
  * Supabase client for database operations
@@ -30,13 +30,17 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, 
   },
 });
 
+/** Result type for insertBooking so callers get BookingsRow, not 'never'. */
+export type InsertBookingResult = { data: BookingsRow | null; error: PostgrestError | null };
+
 /**
  * Typed insert for bookings — centralizes Supabase type workaround so route code has no casts.
  * Use this instead of supabase.from('bookings').insert(...) in API routes.
  */
-export async function insertBooking(data: BookingsInsert) {
+export async function insertBooking(data: BookingsInsert): Promise<InsertBookingResult> {
   // Supabase client infers insert param as 'never'; assertion here keeps route code cast-free.
-  return supabase.from('bookings').insert(data as never).select().single();
+  const result = await supabase.from('bookings').insert(data as never).select().single();
+  return result as InsertBookingResult;
 }
 
 /**
