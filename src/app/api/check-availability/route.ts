@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, type AvailabilityLogInsert } from '@/lib/supabaseClient';
 import { checkAvailability } from '@/lib/browserAutomation';
 
 /**
@@ -42,14 +42,16 @@ export async function POST(request: NextRequest) {
       ? 'Blue Hawaiian Helicopters' 
       : 'Rainbow Helicopters';
 
-    await supabase.from('availability_logs').insert({
+    const logEntry: AvailabilityLogInsert = {
       booking_id: validated.bookingId || null,
       operator_name: operatorName,
       date: validated.date,
-      available: result.available,
-      details: result.details || null,
+      available: result.available ?? false,
+      details: result.details ? (result.details as any) : null,
       source: result.source || 'manual',
-    });
+    };
+
+    await supabase.from('availability_logs').insert(logEntry);
 
     return NextResponse.json({
       success: true,
@@ -66,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: error.errors },
+        { success: false, error: 'Invalid request data', details: error.issues },
         { status: 400 }
       );
     }
