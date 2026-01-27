@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabaseClient';
-import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
+import type { BookingsRow, BookingsUpdate, BookingsInsert, Database } from '@/lib/database.types';
+
+/** Type Supabase expects for bookings updates (same as BookingsUpdate; assertion fixes client inference) */
+type BookingsUpdatePayload = Database['public']['Tables']['bookings']['Update'];
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail } from '@/lib/email';
@@ -104,20 +107,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prevMeta = booking.metadata ?? {};
-    const prevMessages = Array.isArray(prevMeta.customerMessages)
-      ? prevMeta.customerMessages
+    const prevMeta: Record<string, unknown> = booking.metadata ?? {};
+    const prevMessages: unknown[] = Array.isArray(prevMeta.customerMessages)
+      ? (prevMeta.customerMessages as unknown[])
       : [];
+
+    const newMetadata: Record<string, unknown> = {
+      ...prevMeta,
+      customerMessages: [
+        ...prevMessages,
+        { content: validated.emailContent, timestamp: new Date().toISOString() },
+      ],
+    };
 
     const updateData: BookingsUpdate = {
       updated_at: new Date().toISOString(),
-      metadata: {
-        ...prevMeta,
-        customerMessages: [
-          ...prevMessages,
-          { content: validated.emailContent, timestamp: new Date().toISOString() },
-        ],
-      },
+      metadata: newMetadata,
     };
 
     if (analysis.extractedData) {
@@ -131,9 +136,10 @@ export async function POST(request: NextRequest) {
       if (analysis.extractedData.specialRequests) updateData.special_requests = analysis.extractedData.specialRequests;
     }
 
+    // Assert to BookingsUpdatePayload to satisfy Supabase client's .update() typings (avoids 'never' inference)
     const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData)
+      .update(updateData as BookingsUpdatePayload)
       .eq('id', booking.id);
 
     if (updateError) {
