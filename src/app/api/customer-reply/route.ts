@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, type Booking } from '@/lib/supabaseClient';
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail, sendBookingRequestToOperator } from '@/lib/email';
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       // No existing booking - treat as new inquiry
       if (analysis.isBookingRequest && analysis.extractedData) {
         // Create new booking from extracted data
-        const { data: newBooking, error: createError } = await supabase
+        const insertResult = await supabase
           .from('bookings')
           .insert({
             status: bookingStatuses.COLLECTING_INFO,
@@ -87,7 +87,10 @@ export async function POST(request: NextRequest) {
           .select()
           .single();
 
-        if (!createError && newBooking) {
+        const newBooking = insertResult.data as Booking | null;
+        const createError = insertResult.error;
+
+        if (!createError && newBooking && newBooking.id) {
           // Send acknowledgment
           await sendEmail({
             to: validated.fromEmail,
