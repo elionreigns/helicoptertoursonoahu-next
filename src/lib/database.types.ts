@@ -39,13 +39,11 @@ export type BookingsRow = {
   operator_name: string | null;
 };
 
+/** Insert payload: id auto-generated; total_weight required; other fields optional */
+export type BookingsInsert = Omit<Partial<BookingsRow>, 'id'> & { total_weight: number };
+
 /** Update payload: all fields optional */
 export type BookingsUpdate = Partial<BookingsRow>;
-
-/** Insert payload: total_weight required; all other fields optional */
-export type BookingsInsert = Partial<Omit<BookingsRow, 'total_weight'>> & {
-  total_weight: number;
-};
 
 /** Supabase Database interface — bookings table uses types above */
 export interface Database {

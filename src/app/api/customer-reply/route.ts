@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
         const { data: newRow, error: createError } = await supabase
           .from('bookings')
-          .insert(insertData)
+          .insert(insertData as BookingsInsert)
           .select()
           .single();
 
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prevMeta = booking.metadata ?? {};
+    const prevMeta = booking?.metadata ?? {};
     const prevMessages = Array.isArray(prevMeta.customerMessages)
       ? prevMeta.customerMessages
       : [];
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData)
+      .update(updateData as BookingsUpdate)
       .eq('id', booking.id);
 
     if (updateError) {
