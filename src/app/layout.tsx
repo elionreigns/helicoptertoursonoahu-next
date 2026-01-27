@@ -11,8 +11,20 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Book Your Oahu Helicopter Tour | Helicopter Tours on Oahu",
-  description: "Book your unforgettable helicopter tour experience on Oahu. Safe, scenic, and personalized tours with top-rated operators.",
+  title: "Helicopter Tours on Oahu - Book Now",
+  description:
+    "Book your Oahu helicopter tour with Blue Hawaiian & Rainbow Helicopters. Safe, scenic, personalized experiences. Compare operators and book online.",
+  openGraph: {
+    title: "Helicopter Tours on Oahu - Book Now",
+    description:
+      "Book your Oahu helicopter tour with Blue Hawaiian & Rainbow Helicopters. Safe, scenic, personalized experiences.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Helicopter Tours on Oahu - Book Now",
+    description: "Book your Oahu helicopter tour with Blue Hawaiian & Rainbow Helicopters.",
+  },
 };
 
 export default function RootLayout({
