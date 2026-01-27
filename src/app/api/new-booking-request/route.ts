@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { insertBooking } from '@/lib/supabaseClient';
+import type { BookingsInsert } from '@/lib/database.types';
 import { operators } from '@/lib/constants'; // Import operators for operator selection
 import { sendBookingRequestToOperator, sendConfirmationToCustomer } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
@@ -151,32 +152,29 @@ export async function POST(request: NextRequest) {
       console.log('Payment information provided - will forward to operator securely');
     }
 
-    // Insert booking into Supabase
-    const { data: booking, error: dbError } = await supabase
-      .from('bookings')
-      .insert({
-        ref_code: refCode,
-        customer_name: validated.name,
-        customer_email: validated.email,
-        customer_phone: validated.phone || null,
-        party_size: validated.party_size,
-        preferred_date: validated.preferred_date,
-        time_window: validated.time_window || null,
-        doors_off: validated.doors_off || false,
-        hotel: validated.hotel || null,
-        special_requests: validated.special_requests || null,
-        total_weight: validated.total_weight,
-        source: validated.source,
-        status: 'pending',
-        operator_name: operator.name,
-        metadata: {
-          ...(paymentMetadata && { payment: paymentMetadata }),
-          ...(availabilityResult && { availability_check: availabilityResult }),
-          tour_name: validated.tour_name || null,
-        },
-      } as any)
-      .select()
-      .single();
+    // Insert booking into Supabase (typed client; no casts)
+    const insertPayload: BookingsInsert = {
+      ref_code: refCode,
+      customer_name: validated.name,
+      customer_email: validated.email,
+      customer_phone: validated.phone ?? null,
+      party_size: validated.party_size,
+      preferred_date: validated.preferred_date,
+      time_window: validated.time_window ?? null,
+      doors_off: validated.doors_off ?? false,
+      hotel: validated.hotel ?? null,
+      special_requests: validated.special_requests ?? null,
+      total_weight: validated.total_weight,
+      source: validated.source,
+      status: 'pending',
+      operator_name: operator.name,
+      metadata: {
+        ...(paymentMetadata && { payment: paymentMetadata }),
+        ...(availabilityResult && { availability_check: availabilityResult }),
+        tour_name: validated.tour_name ?? null,
+      },
+    };
+    const { data: booking, error: dbError } = await insertBooking(insertPayload);
 
     if (dbError || !booking) {
       console.error('Database error:', dbError);
