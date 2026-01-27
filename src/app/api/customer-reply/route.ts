@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, type Booking, type BookingUpdate } from '@/lib/supabaseClient';
+import type { Database } from '@/lib/database.types';
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail, sendBookingRequestToOperator } from '@/lib/email';
+
+// Type alias for BookingsRow to make it easier to use
+type BookingsRow = Database['public']['Tables']['bookings']['Row'];
 
 /**
  * Schema for customer reply
@@ -136,8 +140,9 @@ export async function POST(request: NextRequest) {
 
     const booking: Booking = bookings[0] as Booking;
     
-    // Build update data with proper typing
-    const updateData: BookingUpdate = {
+    // Build update data with proper typing using Partial<BookingsRow>
+    // This ensures all fields match the database schema
+    const updateData: Partial<BookingsRow> = {
       updated_at: new Date().toISOString(),
     };
 
@@ -153,12 +158,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Update metadata with customer message (safely handle JSONB metadata)
-    // booking.metadata is Json | null, so we need to cast it safely
-    const existingMetadata = booking.metadata 
+    // booking.metadata is Json | null from database, cast to Record for safe access
+    const existingMetadata: Record<string, any> = booking.metadata 
       ? (booking.metadata as Record<string, any>)
-      : ({} as Record<string, any>);
+      : {};
     
-    updateData.metadata = {
+    // Build new metadata object with customer message
+    const newMetadata: Record<string, any> = {
       ...existingMetadata,
       customerMessages: [
         ...(Array.isArray(existingMetadata.customerMessages) ? existingMetadata.customerMessages : []),
@@ -167,13 +173,24 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString(),
         },
       ],
-    } as any; // JSONB type requires any for complex objects
+    };
 
-    // Use type assertion for update to work around Supabase type inference limitation
-    await supabase
+    // Assign metadata to updateData (Json type accepts Record<string, any>)
+    // Cast to the Json type expected by the database
+    updateData.metadata = newMetadata as Database['public']['Tables']['bookings']['Update']['metadata'];
+
+    // Update booking in database
+    // Type assertion needed due to Supabase's type inference limitations
+    // updateData is properly typed as Partial<BookingsRow>, which is compatible with BookingUpdate
+    const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData as any)
+      .update(updateData as unknown as BookingUpdate)
       .eq('id', booking.id);
+
+    if (updateError) {
+      console.error('Error updating booking:', updateError);
+      // Continue anyway - don't fail the request
+    }
 
     // Send acknowledgment
     await sendEmail({
