@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase, insertBooking, updateBooking } from '@/lib/supabaseClient';
+import { supabase, insertBooking, updateBooking, type InsertBookingResult } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
@@ -66,9 +66,11 @@ export async function POST(request: NextRequest) {
           total_weight: 300,
         };
 
-        const { data: newRow, error: createError } = await insertBooking(insertData);
+        const insertResult: InsertBookingResult = await insertBooking(insertData);
+        const newRow = insertResult.data;
+        const createError = insertResult.error;
 
-        if (!createError && newRow && newRow.id) {
+        if (!createError && newRow != null && newRow.id) {
           await sendEmail({
             to: validated.fromEmail,
             subject: 'Thank You for Your Booking Inquiry',
