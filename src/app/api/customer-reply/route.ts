@@ -6,7 +6,7 @@ import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail, sendBookingRequestToOperator } from '@/lib/email';
 
-// Type alias for BookingsRow to make it easier to use
+// Type aliases for database types
 type BookingsRow = Database['public']['Tables']['bookings']['Row'];
 
 /**
@@ -75,22 +75,24 @@ export async function POST(request: NextRequest) {
       // No existing booking - treat as new inquiry
       if (analysis.isBookingRequest && analysis.extractedData) {
         // Create new booking from extracted data
+        const insertData: Database['public']['Tables']['bookings']['Insert'] = {
+          status: bookingStatuses.COLLECTING_INFO,
+          customer_name: analysis.extractedData.name || 'Unknown',
+          customer_email: validated.fromEmail,
+          customer_phone: analysis.extractedData.phone || null,
+          party_size: analysis.extractedData.partySize || null,
+          preferred_date: analysis.extractedData.preferredDate || null,
+          time_window: analysis.extractedData.timeWindow || null,
+          doors_off: analysis.extractedData.doorsOff || null,
+          hotel: analysis.extractedData.hotel || null,
+          special_requests: analysis.extractedData.specialRequests || null,
+          source: 'email',
+          total_weight: 300, // Default weight if not provided
+        };
+        
         const insertResult = await supabase
           .from('bookings')
-          .insert({
-            status: bookingStatuses.COLLECTING_INFO,
-            customer_name: analysis.extractedData.name || 'Unknown',
-            customer_email: validated.fromEmail,
-            customer_phone: analysis.extractedData.phone || null,
-            party_size: analysis.extractedData.partySize || null,
-            preferred_date: analysis.extractedData.preferredDate || null,
-            time_window: analysis.extractedData.timeWindow || null,
-            doors_off: analysis.extractedData.doorsOff || null,
-            hotel: analysis.extractedData.hotel || null,
-            special_requests: analysis.extractedData.specialRequests || null,
-            source: 'email',
-            total_weight: 300, // Default weight if not provided
-          } as any)
+          .insert(insertData)
           .select()
           .single();
 
@@ -138,11 +140,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const booking: Booking = bookings[0] as Booking;
+    const booking: BookingsRow | null = bookings[0] as BookingsRow | null;
     
-    // Build update data with proper typing using Partial<BookingsRow>
-    // This ensures all fields match the database schema
-    const updateData: Partial<BookingsRow> = {
+    // Null check for booking
+    if (!booking) {
+      return NextResponse.json(
+        { success: false, error: 'Booking not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Build update data using BookingUpdate type (the correct type for Supabase updates)
+    // This type is specifically designed for update operations
+    const updateData: BookingUpdate = {
       updated_at: new Date().toISOString(),
     };
 
@@ -158,16 +168,23 @@ export async function POST(request: NextRequest) {
     }
 
     // Update metadata with customer message (safely handle JSONB metadata)
-    // booking.metadata is Json | null from database, cast to Record for safe access
-    const existingMetadata: Record<string, any> = booking.metadata 
+    // booking.metadata is Json | null from database, safely extract existing data
+    const existingMetadata = booking.metadata 
       ? (booking.metadata as Record<string, any>)
       : {};
     
     // Build new metadata object with customer message
-    const newMetadata: Record<string, any> = {
+    // Ensure customerMessages is an array
+    const existingMessages = Array.isArray(existingMetadata.customerMessages) 
+      ? existingMetadata.customerMessages 
+      : [];
+    
+    // Create new metadata object
+    // The Json type accepts objects, so this is compatible
+    const newMetadata = {
       ...existingMetadata,
       customerMessages: [
-        ...(Array.isArray(existingMetadata.customerMessages) ? existingMetadata.customerMessages : []),
+        ...existingMessages,
         {
           content: validated.emailContent,
           timestamp: new Date().toISOString(),
@@ -175,16 +192,16 @@ export async function POST(request: NextRequest) {
       ],
     };
 
-    // Assign metadata to updateData (Json type accepts Record<string, any>)
-    // Cast to the Json type expected by the database
+    // Assign metadata to updateData
+    // TypeScript will infer this as compatible with Json type
     updateData.metadata = newMetadata as Database['public']['Tables']['bookings']['Update']['metadata'];
 
     // Update booking in database
-    // Type assertion needed due to Supabase's type inference limitations
-    // updateData is properly typed as Partial<BookingsRow>, which is compatible with BookingUpdate
+    // No type cast needed - updateData is already typed as BookingUpdate
+    // This matches exactly what Supabase expects for update operations
     const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData as unknown as BookingUpdate)
+      .update(updateData)
       .eq('id', booking.id);
 
     if (updateError) {
