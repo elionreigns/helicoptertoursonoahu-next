@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, insertBooking, updateBooking } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
@@ -66,11 +66,7 @@ export async function POST(request: NextRequest) {
           total_weight: 300,
         };
 
-        const { data: newRow, error: createError } = await supabase
-          .from('bookings')
-          .insert(insertData as BookingsInsert)
-          .select()
-          .single();
+        const { data: newRow, error: createError } = await insertBooking(insertData);
 
         if (!createError && newRow && newRow.id) {
           await sendEmail({
@@ -131,10 +127,7 @@ export async function POST(request: NextRequest) {
       if (analysis.extractedData.specialRequests) updateData.special_requests = analysis.extractedData.specialRequests;
     }
 
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update(updateData as BookingsUpdate)
-      .eq('id', booking.id);
+    const { error: updateError } = await updateBooking(booking.id, updateData);
 
     if (updateError) {
       console.error('Error updating booking:', updateError);

@@ -1,5 +1,5 @@
 /**
- * Database types for Supabase — complete BookingsRow and related types.
+ * Database types for Supabase — full BookingsRow and related types.
  * metadata: Record<string, any> | null for JSONB (customerMessages, etc.).
  */
 
@@ -17,7 +17,7 @@ export type BookingsRow = {
   created_at: string;
   updated_at: string;
   ref_code: string | null;
-  status: string;
+  status: string | null;
   customer_name: string | null;
   customer_email: string | null;
   customer_phone: string | null;
@@ -27,7 +27,7 @@ export type BookingsRow = {
   doors_off: boolean | null;
   hotel: string | null;
   special_requests: string | null;
-  total_weight: number;
+  total_weight: number | null;
   operator: string | null;
   /** JSONB — customerMessages and other app data */
   metadata: Record<string, any> | null;
@@ -39,8 +39,8 @@ export type BookingsRow = {
   operator_name: string | null;
 };
 
-/** Insert payload: id auto-generated; total_weight required; other fields optional */
-export type BookingsInsert = Omit<Partial<BookingsRow>, 'id'> & { total_weight: number };
+/** Insert payload: id and created_at are auto-generated */
+export type BookingsInsert = Partial<Omit<BookingsRow, 'id' | 'created_at'>> & { total_weight: number };
 
 /** Update payload: all fields optional */
 export type BookingsUpdate = Partial<BookingsRow>;

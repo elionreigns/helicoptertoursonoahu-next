@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
+import type { BookingsInsert, BookingsUpdate } from './database.types';
 
 /**
  * Supabase client for database operations
  * Uses environment variables for connection
- * 
+ *
  * SECURITY NOTE: This client uses the service role key which bypasses Row Level Security (RLS).
  * For production, ensure RLS policies are properly configured in Supabase:
  * 1. Enable RLS on all tables in Supabase dashboard
@@ -28,6 +29,23 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, 
     persistSession: false,
   },
 });
+
+/**
+ * Typed insert for bookings — centralizes Supabase type workaround so route code has no casts.
+ * Use this instead of supabase.from('bookings').insert(...) in API routes.
+ */
+export async function insertBooking(data: BookingsInsert) {
+  // Supabase client infers insert param as 'never'; assertion here keeps route code cast-free.
+  return supabase.from('bookings').insert(data as never).select().single();
+}
+
+/**
+ * Typed update for bookings — centralizes Supabase type workaround so route code has no casts.
+ * Use this instead of supabase.from('bookings').update(...) in API routes.
+ */
+export async function updateBooking(id: string, data: BookingsUpdate) {
+  return supabase.from('bookings').update(data as never).eq('id', id);
+}
 
 /**
  * Type-safe database operations
