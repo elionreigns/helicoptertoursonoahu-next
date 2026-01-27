@@ -4,12 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
+    "server-only": "^0.0.1",
     "imap": "^0.8.19",
     "mailparser": "^3.6.5",
     "next": "16.1.4",

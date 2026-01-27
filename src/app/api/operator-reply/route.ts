@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, updateBooking } from '@/lib/supabaseClient';
+import type { BookingsRow, BookingsUpdate } from '@/lib/database.types';
 import { bookingStatuses, operators } from '@/lib/constants'; // Import operators for operator selection
 import { parseOperatorReply } from '@/lib/openai';
 import { sendEmail, sendConfirmationToCustomer } from '@/lib/email';
@@ -41,39 +42,36 @@ export async function POST(request: NextRequest) {
     
     const validated = operatorReplySchema.parse(body);
 
-    // Find booking by bookingId or refCode
-    let booking = null;
-    let bookingError = null;
+    // Find booking by bookingId or refCode (typed result to avoid 'never')
+    type SelectOne = { data: BookingsRow | null; error: { message?: string } | null };
+    let booking: BookingsRow | null = null;
+    let bookingError: { message?: string } | null = null;
 
     if (validated.bookingId) {
       const result = await supabase
         .from('bookings')
         .select('*')
         .eq('id', validated.bookingId)
-        .single();
+        .single() as SelectOne;
       booking = result.data;
       bookingError = result.error;
     } else if (validated.refCode) {
-      // Search by ref_code in metadata
-      const result = await supabase
+      const res = await supabase
         .from('bookings')
         .select('*')
         .contains('metadata', { ref_code: validated.refCode })
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
-      booking = result.data;
-      bookingError = result.error;
+        .limit(1) as { data: BookingsRow[] | null; error: { message?: string } | null };
+      booking = (res.data ?? [])[0] ?? null;
+      bookingError = res.error;
     } else {
-      // Try to find by operator email and recent date
-      // This is a fallback if n8n doesn't provide bookingId/refCode
       const result = await supabase
         .from('bookings')
         .select('*')
         .eq('operator_name', validated.operatorName || '')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle() as SelectOne;
       booking = result.data;
       bookingError = result.error;
     }
@@ -106,17 +104,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Update booking based on operator response
-    let newStatus = booking.status;
-    let updateData: any = {
+    const prevMeta = booking?.metadata ?? {};
+    let newStatus = booking.status ?? null;
+    const updateData: BookingsUpdate = {
       updated_at: new Date().toISOString(),
-      operator_name: operatorName,
+      operator_name: operatorName ?? null,
     };
 
     if (parsed.isConfirmation) {
       newStatus = bookingStatuses.CONFIRMED;
       updateData.status = newStatus;
       updateData.confirmation_number = parsed.confirmationNumber || null;
-      updateData.total_amount = parsed.price || null;
+      updateData.total_amount = parsed.price ?? null;
 
       // Send confirmation to customer
       if (booking.customer_email && booking.customer_name) {
@@ -137,7 +136,7 @@ export async function POST(request: NextRequest) {
       newStatus = bookingStatuses.CANCELLED;
       updateData.status = newStatus;
       updateData.metadata = {
-        ...(booking.metadata as object || {}),
+        ...prevMeta,
         rejectionReason: parsed.notes,
       };
 
@@ -151,11 +150,10 @@ export async function POST(request: NextRequest) {
         });
       }
     } else if (parsed.availableDates && parsed.availableDates.length > 0) {
-      // Operator provided alternative dates
       newStatus = bookingStatuses.AWAITING_PAYMENT;
       updateData.status = newStatus;
       updateData.metadata = {
-        ...(booking.metadata as object || {}),
+        ...prevMeta,
         alternativeDates: parsed.availableDates,
         operatorNotes: parsed.notes,
       };
@@ -170,19 +168,14 @@ export async function POST(request: NextRequest) {
         });
       }
     } else {
-      // General response - update metadata
       updateData.metadata = {
-        ...(booking.metadata as object || {}),
+        ...prevMeta,
         operatorResponse: parsed.notes,
         lastOperatorContact: new Date().toISOString(),
       };
     }
 
-    // Update booking
-    const { error: updateError } = await supabase
-      .from('bookings')
-      .update(updateData)
-      .eq('id', booking.id);
+    const { error: updateError } = await updateBooking(booking.id, updateData);
 
     if (updateError) {
       console.error('Update error:', updateError);

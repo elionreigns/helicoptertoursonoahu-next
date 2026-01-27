@@ -1,3 +1,4 @@
+import 'server-only';
 import { createClient, type PostgrestError } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import type { BookingsInsert, BookingsUpdate, BookingsRow } from './database.types';

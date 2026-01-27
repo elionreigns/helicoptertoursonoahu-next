@@ -1,8 +1,8 @@
+import 'server-only';
 /**
  * Browser automation for checking operator availability
  * Supports Browserbase and Playwright
  */
-
 import { getFareHarborUrl, updateFareHarborUrlForDate } from './fareharborTours';
 
 /**

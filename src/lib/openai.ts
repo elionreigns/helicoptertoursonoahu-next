@@ -1,3 +1,4 @@
+import 'server-only';
 import OpenAI from 'openai';
 import { emails } from './constants';
 
