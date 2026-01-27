@@ -1,14 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabaseClient';
-import type { BookingsRow, BookingsUpdate, BookingsInsert, Database } from '@/lib/database.types';
+import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail } from '@/lib/email';
-
-/** Supabase client infers 'never' for insert/update params; these assertions fix it. */
-type BookingsInsertPayload = Database['public']['Tables']['bookings']['Insert'];
-type BookingsUpdatePayload = Database['public']['Tables']['bookings']['Update'];
 
 const customerReplySchema = z.object({
   emailContent: z.string(),
@@ -70,11 +66,9 @@ export async function POST(request: NextRequest) {
           total_weight: 300,
         };
 
-        // Supabase client infers insert param as 'never' when types don't flow; cast to expected param type to satisfy compiler.
         const { data: newRow, error: createError } = await supabase
           .from('bookings')
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase infers 'never' for insert; payload is BookingsInsert.
-          .insert(insertData as any)
+          .insert(insertData)
           .select()
           .single();
 
@@ -102,7 +96,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const booking: BookingsRow | null = bookings[0] ?? null;
+    const booking: BookingsRow = bookings[0];
     if (!booking) {
       return NextResponse.json(
         { success: false, error: 'Booking not found' },
@@ -110,22 +104,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prevMeta: Record<string, unknown> = booking.metadata ?? {};
-    const prevMessages: unknown[] = Array.isArray(prevMeta.customerMessages)
-      ? (prevMeta.customerMessages as unknown[])
+    const prevMeta = booking.metadata ?? {};
+    const prevMessages = Array.isArray(prevMeta.customerMessages)
+      ? prevMeta.customerMessages
       : [];
-
-    const newMetadata: Record<string, unknown> = {
-      ...prevMeta,
-      customerMessages: [
-        ...prevMessages,
-        { content: validated.emailContent, timestamp: new Date().toISOString() },
-      ],
-    };
 
     const updateData: BookingsUpdate = {
       updated_at: new Date().toISOString(),
-      metadata: newMetadata,
+      metadata: {
+        ...prevMeta,
+        customerMessages: [
+          ...prevMessages,
+          { content: validated.emailContent, timestamp: new Date().toISOString() },
+        ],
+      },
     };
 
     if (analysis.extractedData) {
@@ -139,10 +131,9 @@ export async function POST(request: NextRequest) {
       if (analysis.extractedData.specialRequests) updateData.special_requests = analysis.extractedData.specialRequests;
     }
 
-    // Assert to BookingsUpdatePayload to satisfy Supabase client's .update() typings (avoids 'never' inference)
     const { error: updateError } = await supabase
       .from('bookings')
-      .update(updateData as BookingsUpdatePayload)
+      .update(updateData)
       .eq('id', booking.id);
 
     if (updateError) {

@@ -1,7 +1,6 @@
 /**
- * Database types for Supabase
- * Explicit row/update types for bookings to avoid 'never' inference in TypeScript.
- * BookingsRow uses Record<string, any> | null for metadata (JSONB) for reliable typing.
+ * Database types for Supabase — complete BookingsRow and related types.
+ * metadata: Record<string, any> | null for JSONB (customerMessages, etc.).
  */
 
 export type Json =
@@ -28,28 +27,27 @@ export type BookingsRow = {
   doors_off: boolean | null;
   hotel: string | null;
   special_requests: string | null;
-  operator_id: string | null;
-  operator_name: string | null;
+  total_weight: number;
   operator: string | null;
-  confirmation_number: string | null;
+  /** JSONB — customerMessages and other app data */
+  metadata: Record<string, any> | null;
   payment_status: string | null;
   total_amount: number | null;
-  total_weight: number;
+  confirmation_number: string | null;
   source: string | null;
-  /** JSONB — use Record for safe access in app code (e.g. customerMessages) */
-  metadata: Record<string, unknown> | null;
+  operator_id: string | null;
+  operator_name: string | null;
 };
 
 /** Update payload: all fields optional */
 export type BookingsUpdate = Partial<BookingsRow>;
 
-/** Insert payload: total_weight required; others optional */
-export type BookingsInsert = Omit<Partial<BookingsRow>, 'metadata'> & {
+/** Insert payload: total_weight required; all other fields optional */
+export type BookingsInsert = Partial<Omit<BookingsRow, 'total_weight'>> & {
   total_weight: number;
-  metadata?: Record<string, unknown> | null;
 };
 
-/** Supabase Database interface — bookings table uses explicit types above */
+/** Supabase Database interface — bookings table uses types above */
 export interface Database {
   public: {
     Tables: {
