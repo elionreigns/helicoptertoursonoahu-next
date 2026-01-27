@@ -82,7 +82,8 @@ export async function POST(request: NextRequest) {
             hotel: analysis.extractedData.hotel || null,
             special_requests: analysis.extractedData.specialRequests || null,
             source: 'email',
-          })
+            total_weight: 300, // Default weight if not provided
+          } as any)
           .select()
           .single();
 

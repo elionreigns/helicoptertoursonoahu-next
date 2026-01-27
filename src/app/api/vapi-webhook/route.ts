@@ -231,7 +231,7 @@ export async function POST(request: NextRequest) {
           call_cost: call?.cost,
           extraction_confidence: extraction.confidence,
         },
-      })
+      } as any)
       .select()
       .single();
 

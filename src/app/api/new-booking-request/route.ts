@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
           ...(availabilityResult && { availability_check: availabilityResult }),
           tour_name: validated.tour_name || null,
         },
-      })
+      } as any)
       .select()
       .single();
 
