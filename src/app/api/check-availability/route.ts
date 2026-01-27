@@ -42,16 +42,22 @@ export async function POST(request: NextRequest) {
       ? 'Blue Hawaiian Helicopters' 
       : 'Rainbow Helicopters';
 
-    const logEntry: AvailabilityLogInsert = {
-      booking_id: validated.bookingId || null,
-      operator_name: operatorName,
-      date: validated.date,
-      available: result.available ?? false,
-      details: result.details ? (result.details as any) : null,
-      source: result.source || 'manual',
-    };
-
-    await supabase.from('availability_logs').insert(logEntry);
+    // Log availability check result (using type assertion to work around Supabase type inference)
+    try {
+      await supabase
+        .from('availability_logs')
+        .insert({
+          booking_id: validated.bookingId ?? null,
+          operator_name: operatorName,
+          date: validated.date,
+          available: result.available ?? false,
+          details: result.details ? (result.details as any) : null,
+          source: result.source ?? 'manual',
+        } as any);
+    } catch (dbError) {
+      console.error('Error logging availability check:', dbError);
+      // Don't fail the request if logging fails
+    }
 
     return NextResponse.json({
       success: true,

@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     let fullTranscript = transcript || '';
     if (conversation && conversation.length > 0) {
       fullTranscript = conversation
-        .map(msg => `${msg.role}: ${msg.content}`)
+        .map((msg: { role: string; content: string }) => `${msg.role}: ${msg.content}`)
         .join('\n');
     }
 
@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Invalid webhook payload',
-          details: error.errors,
+          details: error.issues,
         },
         { status: 400 }
       );

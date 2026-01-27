@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
           customerEmail: booking.customer_email,
           customerName: booking.customer_name,
           bookingDetails: {
-            operatorName: validated.operatorName,
+            operatorName: validated.operatorName || booking.operator_name || 'Operator',
             date: booking.preferred_date || '',
             time: parsed.notes || undefined,
             partySize: booking.party_size || 1,
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: error.errors },
+        { success: false, error: 'Invalid request data', details: error.issues },
         { status: 400 }
       );
     }
