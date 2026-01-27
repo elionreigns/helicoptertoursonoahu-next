@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { supabase, updateBooking } from '@/lib/supabaseClient';
+import type { BookingsRow, BookingsUpdate } from '@/lib/database.types';
 import { bookingStatuses } from '@/lib/constants';
 
 /**
@@ -38,12 +39,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = updateStatusSchema.parse(body);
 
-    // Get current booking
+    // Get current booking (typed to avoid 'never')
+    type SelectOne = { data: BookingsRow | null; error: { message?: string } | null };
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('*')
       .eq('id', validated.bookingId)
-      .single();
+      .single() as SelectOne;
 
     if (bookingError || !booking) {
       return NextResponse.json(
@@ -52,8 +54,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Prepare update data
-    const updateData: any = {
+    const prevMeta = booking?.metadata ?? {};
+    const updateData: BookingsUpdate = {
       status: validated.status,
       updated_at: new Date().toISOString(),
     };
@@ -72,18 +74,12 @@ export async function POST(request: NextRequest) {
 
     if (validated.metadata) {
       updateData.metadata = {
-        ...(booking.metadata as object || {}),
+        ...prevMeta,
         ...validated.metadata,
       };
     }
 
-    // Update booking
-    const { data: updatedBooking, error: updateError } = await supabase
-      .from('bookings')
-      .update(updateData)
-      .eq('id', validated.bookingId)
-      .select()
-      .single();
+    const { error: updateError } = await updateBooking(validated.bookingId, updateData);
 
     if (updateError) {
       console.error('Update error:', updateError);
@@ -93,7 +89,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Trigger n8n webhook if configured
+    // Re-fetch updated row for response and webhook
+    const { data: updatedBooking } = await supabase
+      .from('bookings')
+      .select('*')
+      .eq('id', validated.bookingId)
+      .single() as SelectOne;
+
     if (process.env.N8N_WEBHOOK_URL) {
       try {
         await fetch(process.env.N8N_WEBHOOK_URL, {
@@ -104,7 +106,7 @@ export async function POST(request: NextRequest) {
             bookingId: validated.bookingId,
             oldStatus: booking.status,
             newStatus: validated.status,
-            booking: updatedBooking,
+            booking: updatedBooking ?? booking,
           }),
         });
       } catch (error) {
@@ -115,7 +117,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        booking: updatedBooking,
+        booking: updatedBooking ?? booking,
       },
     });
   } catch (error) {
