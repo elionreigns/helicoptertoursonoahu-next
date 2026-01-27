@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate, BookingsInsert, Database } from '@/lib/database.types';
-
-/** Type Supabase expects for bookings updates (same as BookingsUpdate; assertion fixes client inference) */
-type BookingsUpdatePayload = Database['public']['Tables']['bookings']['Update'];
 import { bookingStatuses } from '@/lib/constants';
 import { analyzeEmail } from '@/lib/openai';
 import { sendEmail } from '@/lib/email';
+
+/** Supabase client infers 'never' for insert/update params; these assertions fix it. */
+type BookingsInsertPayload = Database['public']['Tables']['bookings']['Insert'];
+type BookingsUpdatePayload = Database['public']['Tables']['bookings']['Update'];
 
 const customerReplySchema = z.object({
   emailContent: z.string(),
@@ -69,9 +70,11 @@ export async function POST(request: NextRequest) {
           total_weight: 300,
         };
 
+        // Supabase client infers insert param as 'never' when types don't flow; cast to expected param type to satisfy compiler.
         const { data: newRow, error: createError } = await supabase
           .from('bookings')
-          .insert(insertData)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase infers 'never' for insert; payload is BookingsInsert.
+          .insert(insertData as any)
           .select()
           .single();
 
