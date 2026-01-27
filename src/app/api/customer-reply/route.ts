@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
 
     await supabase
       .from('bookings')
-      .update(updateData)
+      .update(updateData as any)
       .eq('id', booking.id);
 
     // Send acknowledgment
