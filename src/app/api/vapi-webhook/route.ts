@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase } from '@/lib/supabaseClient';
+import { insertBooking, type InsertBookingResult } from '@/lib/supabaseClient';
+import type { BookingsInsert } from '@/lib/database.types';
 import { VAPI_ASSISTANT_ID, emails, operators } from '@/lib/constants';
 import { extractBookingFromCallTranscript } from '@/lib/openai';
 import { sendEmail, sendConfirmationToCustomer, sendBookingRequestToOperator } from '@/lib/email';
@@ -205,35 +206,34 @@ export async function POST(request: NextRequest) {
     }
     const operator = operators[operatorKey];
 
-    // Create booking in Supabase
+    // Create booking in Supabase (typed insert – do not use raw supabase.insert().single())
     console.log('Creating booking in Supabase...');
-    const { data: booking, error: dbError } = await supabase
-      .from('bookings')
-      .insert({
-        ref_code: refCode,
-        customer_name: extractedData.name!,
-        customer_email: extractedData.email!,
-        customer_phone: extractedData.phone || callerPhone || null,
-        party_size: extractedData.party_size!,
-        preferred_date: extractedData.preferred_date!,
-        time_window: extractedData.time_window!,
-        doors_off: extractedData.doors_off || false,
-        hotel: extractedData.hotel || null,
-        special_requests: extractedData.special_requests || null,
-        total_weight: extractedData.total_weight!,
-        source: 'phone',
-        status: 'pending',
-        operator_name: operator.name,
-        metadata: {
-          vapi_call_id: call?.id,
-          caller_phone: callerPhone,
-          call_duration: call?.duration,
-          call_cost: call?.cost,
-          extraction_confidence: extraction.confidence,
-        },
-      } as any)
-      .select()
-      .single();
+    const insertPayload: BookingsInsert = {
+      ref_code: refCode,
+      customer_name: extractedData.name ?? 'Unknown',
+      customer_email: extractedData.email!,
+      customer_phone: extractedData.phone || callerPhone || null,
+      party_size: extractedData.party_size!,
+      preferred_date: extractedData.preferred_date!,
+      time_window: extractedData.time_window ?? null,
+      doors_off: extractedData.doors_off ?? false,
+      hotel: extractedData.hotel ?? null,
+      special_requests: extractedData.special_requests ?? null,
+      total_weight: extractedData.total_weight!,
+      source: 'phone',
+      status: 'pending',
+      operator_name: operator.name,
+      metadata: {
+        vapi_call_id: call?.id,
+        caller_phone: callerPhone,
+        call_duration: call?.duration,
+        call_cost: call?.cost,
+        extraction_confidence: extraction.confidence,
+      },
+    };
+    const insertResult: InsertBookingResult = await insertBooking(insertPayload);
+    const booking = insertResult.data;
+    const dbError = insertResult.error;
 
     if (dbError || !booking) {
       console.error('Database error creating booking:', dbError);
