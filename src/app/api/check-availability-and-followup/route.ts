@@ -56,11 +56,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if booking already has availability checked
-    if (booking.status === bookingStatuses.AWAITING_PAYMENT || booking.status === bookingStatuses.CONFIRMED) {
+    // Allow re-running if status is still pending or checking_availability (for retries)
+    if (booking.status === bookingStatuses.CONFIRMED) {
       return NextResponse.json(
-        { success: false, error: 'Booking already processed' },
+        { success: false, error: 'Booking already confirmed' },
         { status: 400 }
       );
+    }
+    
+    // If already awaiting payment, still allow re-sending follow-up email if needed
+    if (booking.status === bookingStatuses.AWAITING_PAYMENT) {
+      console.log('Booking already in awaiting_payment status, but continuing to ensure follow-up email is sent');
     }
 
     // Update status to checking_availability
@@ -99,10 +105,16 @@ export async function POST(request: NextRequest) {
     const totalPrice = pricePerPerson * (booking.party_size || 2);
 
     // Send follow-up email with availability
+    // CRITICAL: This email must be sent even if availability check fails
     let emailResult;
     try {
+      // Ensure we have required data
+      if (!booking.customer_email) {
+        throw new Error('Customer email is missing from booking');
+      }
+      
       emailResult = await sendAvailabilityFollowUp({
-        customerEmail: booking.customer_email || '',
+        customerEmail: booking.customer_email,
         customerName: booking.customer_name || 'Valued Customer',
         refCode: booking.ref_code || '',
         tourName: tourName,
@@ -115,13 +127,17 @@ export async function POST(request: NextRequest) {
       });
 
       if (emailResult.success) {
-        console.log('Availability follow-up email sent to:', booking.customer_email);
+        console.log('✅ Availability follow-up email sent successfully to:', booking.customer_email);
       } else {
-        console.error('Availability follow-up email failed:', emailResult.error);
+        console.error('❌ Availability follow-up email failed:', emailResult.error);
+        // Log this as a critical error since follow-up email is essential
+        console.error('CRITICAL: Follow-up email failed for booking:', booking.ref_code);
       }
     } catch (error) {
-      console.error('Error sending availability follow-up email:', error);
+      console.error('❌ Error sending availability follow-up email:', error);
       emailResult = { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      // This is critical - log it prominently
+      console.error('CRITICAL: Failed to send follow-up email for booking:', booking.ref_code, error);
     }
 
     // Update booking with availability results
@@ -133,17 +149,29 @@ export async function POST(request: NextRequest) {
       follow_up_email_sent_at: emailResult.success ? new Date().toISOString() : null,
     };
 
+    // Update booking status - only move to awaiting_payment if email was sent successfully
+    // If email failed, keep status as checking_availability so it can be retried
+    const newStatus = emailResult.success 
+      ? bookingStatuses.AWAITING_PAYMENT 
+      : bookingStatuses.CHECKING_AVAILABILITY;
+    
     await updateBooking(booking.id, {
-      status: bookingStatuses.AWAITING_PAYMENT,
+      status: newStatus,
       metadata: updatedMetadata,
     });
 
+    // Return success even if availability check failed, as long as email was sent
+    const overallSuccess = emailResult.success;
+    
     return NextResponse.json({
-      success: true,
-      message: 'Availability checked and follow-up email sent',
+      success: overallSuccess,
+      message: overallSuccess 
+        ? 'Availability checked and follow-up email sent' 
+        : 'Availability checked but follow-up email failed - please retry',
       availability: availabilityResult,
       emailSent: emailResult.success,
       emailError: emailResult.error,
+      warning: emailResult.success ? undefined : 'Follow-up email failed - customer may not receive availability information',
     });
   } catch (error) {
     console.error('Check availability and follow-up error:', error);

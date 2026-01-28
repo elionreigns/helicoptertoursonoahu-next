@@ -310,30 +310,69 @@ export async function POST(request: NextRequest) {
 
     // Trigger availability check and follow-up email in background (don't wait)
     // This runs asynchronously so the booking response is fast
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'https://booking.helicoptertoursonoahu.com');
+    // Try multiple URL sources to ensure it works
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+      || 'https://booking.helicoptertoursonoahu.com';
     
-    console.log(`Triggering availability check for ${refCode} via ${appUrl}/api/check-availability-and-followup`);
+    const availabilityCheckUrl = `${appUrl}/api/check-availability-and-followup`;
     
-    fetch(`${appUrl}/api/check-availability-and-followup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refCode }),
-    })
-      .then(async (response) => {
+    console.log(`Triggering availability check for ${refCode} via ${availabilityCheckUrl}`);
+    
+    // Use a more robust fetch with timeout and retry logic
+    const triggerAvailabilityCheck = async (url: string, retries = 2): Promise<void> => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refCode }),
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`Availability check API returned ${response.status}:`, errorText);
+          
+          // If 401 or 404, try alternative URL
+          if ((response.status === 401 || response.status === 404) && retries > 0) {
+            const altUrl = 'https://booking.helicoptertoursonoahu.com/api/check-availability-and-followup';
+            if (url !== altUrl) {
+              console.log(`Retrying with alternative URL: ${altUrl}`);
+              return triggerAvailabilityCheck(altUrl, retries - 1);
+            }
+          }
         } else {
           const result = await response.json();
           console.log('Availability check triggered successfully:', result);
         }
-      })
-      .catch(err => {
-        console.error('Failed to trigger availability check:', err);
-        // Don't fail the booking if background job fails
-      });
+      } catch (err: any) {
+        if (err.name === 'AbortError') {
+          console.error('Availability check request timed out');
+        } else {
+          console.error('Failed to trigger availability check:', err);
+        }
+        
+        // Retry with alternative URL if we have retries left
+        if (retries > 0) {
+          const altUrl = 'https://booking.helicoptertoursonoahu.com/api/check-availability-and-followup';
+          if (url !== altUrl) {
+            console.log(`Retrying with alternative URL: ${altUrl}`);
+            return triggerAvailabilityCheck(altUrl, retries - 1);
+          }
+        }
+      }
+    };
+    
+    // Trigger in background (fire and forget, but with error handling)
+    triggerAvailabilityCheck(availabilityCheckUrl).catch(err => {
+      console.error('Background availability check failed after retries:', err);
+      // Don't fail the booking - the follow-up email can be sent manually if needed
+    });
 
     return NextResponse.json({
       success: true,
