@@ -124,6 +124,7 @@ export async function POST(request: NextRequest) {
         availableSlots: availabilityResult.availableSlots || [],
         totalPrice: totalPrice,
         phoneNumber: VAPI_PHONE_NUMBER,
+        isRainbow: operatorKey === 'rainbow',
       });
 
       if (emailResult.success) {

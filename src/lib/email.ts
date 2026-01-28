@@ -386,7 +386,9 @@ Helicopter Tours on Oahu
 
 /**
  * Send follow-up email to customer with available time slots and payment request
- * This is sent after availability check completes
+ * This is sent after availability check completes.
+ * - Blue Hawaiian: shows live FareHarbor times when available, or "checking live availability" + phone
+ * - Rainbow: says we're in contact with Rainbow Helicopters to arrange a time close to their date + phone
  */
 export async function sendAvailabilityFollowUp({
   customerEmail,
@@ -399,6 +401,7 @@ export async function sendAvailabilityFollowUp({
   availableSlots,
   totalPrice,
   phoneNumber,
+  isRainbow,
 }: {
   customerEmail: string;
   customerName: string;
@@ -410,6 +413,8 @@ export async function sendAvailabilityFollowUp({
   availableSlots: Array<{ time: string; price?: number; available: boolean }>;
   totalPrice: number;
   phoneNumber?: string;
+  /** True when operator is Rainbow Helicopters (no live availability; we're in contact with them) */
+  isRainbow?: boolean;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const subject = `Available Tour Times for ${refCode} - Choose Your Time`;
 
@@ -417,10 +422,25 @@ export async function sendAvailabilityFollowUp({
   const dateObj = new Date(date);
   const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  // Build available slots list
+  const phone = phoneNumber || '(707) 381-2583';
+  const phoneTel = phone.replace(/\D/g, '');
+  const phoneLink = phoneTel ? `tel:+1${phoneTel}` : 'tel:+17073812583';
+
+  // Build available slots list (Blue Hawaiian only when we have scraped times)
   let slotsText = '';
   let slotsHtml = '';
-  if (availableSlots && availableSlots.length > 0) {
+  if (isRainbow) {
+    // Rainbow: no live availability; we're in contact with them to arrange a time
+    slotsText = `We're in contact with Rainbow Helicopters to arrange a time close to your preferred date (${formattedDate}). We'll be in touch shortly with options. In the meantime, you can call us at ${phone} with any questions or to discuss times.`;
+    slotsHtml = `
+      <div style="background-color: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #166534; margin-top: 0;">We're Arranging Your Tour with Rainbow Helicopters</h3>
+        <p style="color: #15803d; margin: 0;">We're in contact with Rainbow Helicopters to arrange a time close to your preferred date (<strong>${formattedDate}</strong>). We'll be in touch shortly with options.</p>
+        <p style="color: #15803d; margin: 12px 0 0 0;">In the meantime, call us at <strong><a href="${phoneLink}" style="color: #166534;">${phone}</a></strong> with any questions or to discuss times.</p>
+      </div>
+    `;
+  } else if (availableSlots && availableSlots.length > 0) {
+    // Blue Hawaiian: we have live times from FareHarbor
     slotsText = availableSlots.map((slot, idx) => {
       const slotPrice = slot.price || (totalPrice / partySize);
       const slotTotal = slotPrice * partySize;
@@ -430,6 +450,7 @@ export async function sendAvailabilityFollowUp({
     slotsHtml = `
       <div style="background-color: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 20px 0;">
         <h3 style="color: #0c4a6e; margin-top: 0;">Available Times for ${formattedDate}</h3>
+        <p style="color: #0c4a6e; margin-bottom: 12px;">Here are some available times near your preferred window:</p>
         <ul style="list-style: none; padding: 0;">
           ${availableSlots.map((slot, idx) => {
             const slotPrice = slot.price || (totalPrice / partySize);
@@ -446,10 +467,12 @@ export async function sendAvailabilityFollowUp({
       </div>
     `;
   } else {
-    slotsText = 'We are checking availability and will contact you shortly with available times.';
+    // Blue Hawaiian: scraping didn't return times yet; we're checking live availability
+    slotsText = `We're checking live availability for your preferred date (${formattedDate}) and will contact you shortly with available time slots. You can also call us at ${phone} to discuss times.`;
     slotsHtml = `
       <div style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0;">
-        <p style="color: #92400e; margin: 0;">We are checking availability for your preferred date and will contact you shortly with available time slots.</p>
+        <p style="color: #92400e; margin: 0;">We're checking live availability for your preferred date (<strong>${formattedDate}</strong>) and will contact you shortly with available time slots.</p>
+        <p style="color: #92400e; margin: 12px 0 0 0;">You can also call us at <strong><a href="${phoneLink}" style="color: #b45309;">${phone}</a></strong> to discuss times.</p>
       </div>
     `;
   }
@@ -463,7 +486,7 @@ ${slotsText}
 
 **What's Next:**
 1. Reply to this email with your preferred time slot
-2. Or call us at ${phoneNumber || '(707) 381-2583'} to book over the phone
+2. Or call us at ${phone} to book over the phone
 3. We'll confirm your booking and send payment instructions
 
 **About Your Tour:**
@@ -481,7 +504,7 @@ Total price: $${totalPrice.toFixed(0)} for ${partySize} ${partySize === 1 ? 'gue
 Once you confirm your preferred time, we'll send you a secure payment link or you can call us to complete your booking over the phone.
 
 **Questions?**
-Reply to this email or call us at ${phoneNumber || '(707) 381-2583'}. We're here to help!
+Reply to this email or call us at ${phone}. We're here to help!
 
 Best regards,
 Helicopter Tours on Oahu
@@ -503,7 +526,7 @@ Reference Code: ${refCode}
         <h3 style="color: #1e40af; margin-top: 0;">What's Next:</h3>
         <ol style="color: #475569; line-height: 1.8;">
           <li>Reply to this email with your preferred time slot</li>
-          <li>Or call us at <strong><a href="tel:${phoneNumber?.replace(/\s/g, '') || '+17073812583'}" style="color: #2563eb;">${phoneNumber || '(707) 381-2583'}</a></strong> to book over the phone</li>
+          <li>Or call us at <strong><a href="${phoneLink}" style="color: #2563eb;">${phone}</a></strong> to book over the phone</li>
           <li>We'll confirm your booking and send payment instructions</li>
         </ol>
       </div>
@@ -536,7 +559,7 @@ Reference Code: ${refCode}
       <div style="background-color: #f1f5f9; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
         <p style="color: #475569; margin: 0 0 12px 0;"><strong>Questions?</strong></p>
         <p style="color: #64748b; margin: 0;">
-          Reply to this email or call us at <strong><a href="tel:${phoneNumber?.replace(/\s/g, '') || '+17073812583'}" style="color: #2563eb; text-decoration: none;">${phoneNumber || '(707) 381-2583'}</a></strong>
+          Reply to this email or call us at <strong><a href="${phoneLink}" style="color: #2563eb; text-decoration: none;">${phone}</a></strong>
         </p>
         <p style="color: #64748b; margin: 8px 0 0 0; font-size: 12px;">We're here to help!</p>
       </div>
