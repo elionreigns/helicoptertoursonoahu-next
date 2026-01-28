@@ -300,6 +300,92 @@ export const emails = {
    - **Action Required:** Verify and update prices with actual operator rates
    - Prices are used for display and total calculation
 
+4. **Email Templates Missing Tour Info:** ✅ FIXED
+   - Operator inquiry and customer confirmation emails now include tour name and total price
+   - Updated in `src/lib/email.ts` and `src/app/api/new-booking-request/route.ts`
+
+---
+
+## Error Logs & Troubleshooting
+
+### Where to Find Error Logs
+
+**1. Vercel Deployment Logs (Primary)**
+- Go to: https://vercel.com/dashboard
+- Select your project: `helicoptertoursonoahu-next` (or your project name)
+- Click on **"Deployments"** tab
+- Click on the latest deployment
+- Click **"Functions"** tab
+- Click on any function (e.g., `/api/new-booking-request`) to see logs
+- Or use **"Logs"** tab for real-time logs
+
+**2. Vercel Real-Time Logs**
+- In Vercel dashboard, go to your project
+- Click **"Logs"** tab
+- Filter by function name (e.g., `new-booking-request`, `check-availability-and-followup`)
+- Look for console.log, console.error messages
+
+**3. Supabase Logs**
+- Go to: https://supabase.com/dashboard
+- Select your project
+- Go to **"Logs"** → **"Postgres Logs"** for database errors
+- Go to **"Logs"** → **"API Logs"** for API errors
+
+**4. Resend Email Logs**
+- Go to: https://resend.com/emails
+- View sent emails and delivery status
+- Check for bounce/failure reasons
+
+### Common Errors & Solutions
+
+**Error: "Failed to trigger availability check"**
+- **Cause:** Background fetch to `/api/check-availability-and-followup` failed
+- **Check:** Vercel logs for the exact error
+- **Solution:** Verify `NEXT_PUBLIC_APP_URL` is set correctly in Vercel
+- **Manual Trigger:** You can manually call the endpoint:
+  ```bash
+  curl -X POST https://booking.helicoptertoursonoahu.com/api/check-availability-and-followup \
+    -H "Content-Type: application/json" \
+    -d '{"refCode": "HTO-XXXXXX"}'
+  ```
+
+**Error: "Booking not found" in availability check**
+- **Cause:** Reference code doesn't exist or booking wasn't created
+- **Check:** Supabase `bookings` table for the refCode
+- **Solution:** Verify booking was created successfully in initial request
+
+**Error: "Email send error"**
+- **Cause:** SMTP or Resend API issue
+- **Check:** Vercel logs for specific error (e.g., "Invalid login", "API key invalid")
+- **Solution:** 
+  - If using Resend: Verify `RESEND_API_KEY` and `RESEND_FROM` are set
+  - If using SMTP: Verify SMTP credentials are correct
+
+**Error: "Browserbase execution error"**
+- **Cause:** Script syntax or Browserbase API issue
+- **Check:** Vercel logs for full error message
+- **Solution:** For now, system falls back to "manual check required"
+- **Future Fix:** Rewrite Browserbase script to use their browser API directly
+
+**No Follow-Up Email Received**
+- **Check 1:** Vercel logs for "Availability check triggered successfully"
+- **Check 2:** Vercel logs for `/api/check-availability-and-followup` endpoint
+- **Check 3:** Verify `NEXT_PUBLIC_APP_URL` is set in Vercel
+- **Check 4:** Check Resend dashboard for email delivery status
+- **Manual Test:** Use test page at `/admin/test-operator-reply` or manually call the API
+
+### Debugging Checklist
+
+When a booking is created but follow-up email isn't sent:
+
+1. ✅ Check Vercel logs for "Triggering availability check for HTO-XXXXXX"
+2. ✅ Check Vercel logs for `/api/check-availability-and-followup` endpoint execution
+3. ✅ Verify booking exists in Supabase with correct refCode
+4. ✅ Check if `NEXT_PUBLIC_APP_URL` is set in Vercel environment variables
+5. ✅ Manually trigger the endpoint with the refCode to test
+6. ✅ Check Resend dashboard for email delivery status
+7. ✅ Verify customer email address is correct in booking record
+
 ### 📋 Configuration Checklist
 
 **Required Environment Variables (Vercel):**

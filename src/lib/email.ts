@@ -135,6 +135,8 @@ export async function sendBookingRequestToOperator({
   availabilityResult,
   paymentDetails,
   refCode,
+  tourName,
+  totalPrice,
 }: {
   operatorEmail: string;
   operatorName: string;
@@ -166,6 +168,8 @@ export async function sendBookingRequestToOperator({
     billing_zip?: string;
   } | null;
   refCode?: string;
+  tourName?: string;
+  totalPrice?: number;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const subject = `New Helicopter Tour Booking Request${refCode ? ` - ${refCode}` : ''} - ${bookingDetails.customerName}`;
 
@@ -220,6 +224,8 @@ Customer Information:
 - Phone: ${bookingDetails.customerPhone}${paymentDetails ? ' ⚠️ CALL TO CONFIRM BEFORE CHARGING' : ''}
 
 Tour Details:
+${tourName ? `- Tour: ${tourName}` : ''}
+${totalPrice ? `- Total Price: $${totalPrice.toFixed(2)} (${bookingDetails.partySize} ${bookingDetails.partySize === 1 ? 'person' : 'people'})` : ''}
 - Party Size: ${bookingDetails.partySize}
 - Preferred Date: ${bookingDetails.preferredDate}
 - Time Window: ${bookingDetails.timeWindow || 'Flexible'}
@@ -248,6 +254,8 @@ Helicopter Tours on Oahu
       
       <h3>Tour Details</h3>
       <ul>
+        ${tourName ? `<li><strong>Tour:</strong> ${tourName}</li>` : ''}
+        ${totalPrice ? `<li><strong>Total Price:</strong> $${totalPrice.toFixed(2)} (${bookingDetails.partySize} ${bookingDetails.partySize === 1 ? 'person' : 'people'})</li>` : ''}
         <li><strong>Party Size:</strong> ${bookingDetails.partySize}</li>
         <li><strong>Preferred Date:</strong> ${bookingDetails.preferredDate}</li>
         <li><strong>Time Window:</strong> ${bookingDetails.timeWindow || 'Flexible'}</li>
@@ -290,6 +298,7 @@ export async function sendConfirmationToCustomer({
   bookingDetails,
   confirmationNumber,
   hasPayment,
+  tourName,
 }: {
   customerEmail: string;
   customerName: string;
@@ -302,6 +311,7 @@ export async function sendConfirmationToCustomer({
   };
   confirmationNumber?: string;
   hasPayment?: boolean;
+  tourName?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const subject = `Your Helicopter Tour Booking${confirmationNumber ? ` - ${confirmationNumber}` : ''}`;
 
@@ -316,11 +326,12 @@ Thank you for booking with Helicopter Tours on Oahu!
 
 Booking Details:
 - Reference Code: ${confirmationNumber || 'Pending'}
+${tourName ? `- Tour: ${tourName}` : ''}
 - Operator: ${bookingDetails.operatorName}
 - Date: ${bookingDetails.date}
 - Time: ${bookingDetails.time || 'To be confirmed'}
 - Party Size: ${bookingDetails.partySize}
-${bookingDetails.totalAmount ? `- Total Amount: $${bookingDetails.totalAmount}` : ''}
+${bookingDetails.totalAmount ? `- Total Amount: $${bookingDetails.totalAmount.toFixed(2)}` : ''}
 ${paymentNote}
 We will contact you shortly with final confirmation${hasPayment ? ' and to verify your payment information' : ' and payment details'}.
 
@@ -340,12 +351,13 @@ Helicopter Tours on Oahu
       
       <h3>Booking Details</h3>
       <ul>
+        ${confirmationNumber ? `<li><strong>Reference Code:</strong> ${confirmationNumber}</li>` : ''}
+        ${tourName ? `<li><strong>Tour:</strong> ${tourName}</li>` : ''}
         <li><strong>Operator:</strong> ${bookingDetails.operatorName}</li>
         <li><strong>Date:</strong> ${bookingDetails.date}</li>
         <li><strong>Time:</strong> ${bookingDetails.time || 'To be confirmed'}</li>
         <li><strong>Party Size:</strong> ${bookingDetails.partySize}</li>
-        ${bookingDetails.totalAmount ? `<li><strong>Total Amount:</strong> $${bookingDetails.totalAmount}</li>` : ''}
-        ${confirmationNumber ? `<li><strong>Confirmation Number:</strong> ${confirmationNumber}</li>` : ''}
+        ${bookingDetails.totalAmount ? `<li><strong>Total Amount:</strong> $${bookingDetails.totalAmount.toFixed(2)}</li>` : ''}
       </ul>
       
       ${hasPayment ? `

@@ -5,6 +5,7 @@ import type { BookingsInsert } from '@/lib/database.types';
 import { operators } from '@/lib/constants'; // Import operators for operator selection
 import { sendBookingRequestToOperator, sendConfirmationToCustomer } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
+import { getTourById, calculateTotalPrice } from '@/lib/tours';
 
 export const maxDuration = 30;
 
@@ -81,6 +82,21 @@ export async function POST(request: NextRequest) {
     // Determine operator preference
     const operatorKey: 'blueHawaiian' | 'rainbow' = validated.operator_preference || 'blueHawaiian';
     const operator = operators[operatorKey];
+
+    // Get tour information for pricing and display
+    let tourName: string | undefined;
+    let totalPrice: number | undefined;
+    if (validated.tour_id) {
+      const tour = getTourById(validated.tour_id);
+      if (tour) {
+        tourName = tour.name;
+        totalPrice = calculateTotalPrice(validated.tour_id, validated.party_size);
+      }
+    } else if (validated.tour_name) {
+      tourName = validated.tour_name;
+      // If no tour_id but tour_name provided, we can't calculate exact price
+      // Will use default pricing in follow-up email
+    }
 
     // Check availability (for Blue Hawaiian, use FareHarbor; for Rainbow, email operator)
     let availabilityResult: { 
@@ -233,6 +249,8 @@ export async function POST(request: NextRequest) {
         availabilityResult: availabilityResult,
         paymentDetails: paymentDetailsForOperator, // Full payment details (forwarded securely, not stored)
         refCode: refCode,
+        tourName: tourName,
+        totalPrice: totalPrice,
       });
       if (operatorResult.success) {
         console.log('Booking request email sent to operator:', operator.email);
@@ -253,9 +271,11 @@ export async function POST(request: NextRequest) {
           operatorName: operator.name,
           date: validated.preferred_date,
           partySize: validated.party_size,
+          totalAmount: totalPrice,
         },
         confirmationNumber: refCode,
         hasPayment: !!validated.payment,
+        tourName: tourName,
       });
       if (confirmResult.success) {
         console.log('Confirmation email sent to customer:', validated.email);
@@ -290,18 +310,30 @@ export async function POST(request: NextRequest) {
 
     // Trigger availability check and follow-up email in background (don't wait)
     // This runs asynchronously so the booking response is fast
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL 
       ? `https://${process.env.VERCEL_URL}` 
-      : 'https://booking.helicoptertoursonoahu.com';
+      : 'https://booking.helicoptertoursonoahu.com');
+    
+    console.log(`Triggering availability check for ${refCode} via ${appUrl}/api/check-availability-and-followup`);
     
     fetch(`${appUrl}/api/check-availability-and-followup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refCode }),
-    }).catch(err => {
-      console.error('Failed to trigger availability check:', err);
-      // Don't fail the booking if background job fails
-    });
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Availability check API returned ${response.status}:`, errorText);
+        } else {
+          const result = await response.json();
+          console.log('Availability check triggered successfully:', result);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to trigger availability check:', err);
+        // Don't fail the booking if background job fails
+      });
 
     return NextResponse.json({
       success: true,
