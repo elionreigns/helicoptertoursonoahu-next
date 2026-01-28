@@ -320,23 +320,63 @@ export const emails = {
 
 ## Testing the Workflow
 
-1. **Submit Test Booking:**
-   - Go to `booking.helicoptertoursonoahu.com/bookings`
-   - Fill out form with test data
-   - Submit
+### 1. Submit Test Booking
+- Go to `booking.helicoptertoursonoahu.com/bookings`
+- Fill out form with test data (select operator and tour)
+- Submit and note the reference code (e.g., HTO-BYXUNT)
 
-2. **Check Emails:**
-   - Customer should receive confirmation
-   - Operator should receive inquiry
-   - Check `bookings@helicoptertoursonoahu.com` inbox
+### 2. Check Initial Emails
+- **Customer:** Should receive confirmation email immediately
+- **Operator:** Should receive inquiry email (to test email address)
+- **You:** Check `bookings@helicoptertoursonoahu.com` inbox for copy
 
-3. **Verify Database:**
-   - Check Supabase `bookings` table
-   - Verify reference code and all fields
+### 3. Test Operator Reply (Manual Testing)
 
-4. **Test Availability Check:**
-   - Manually trigger `/api/check-availability-and-followup`
-   - Verify follow-up email sent with time slots
+**Option A: Use API directly (for testing)**
+
+You can manually test operator replies by calling the API endpoint:
+
+```bash
+curl -X POST https://booking.helicoptertoursonoahu.com/api/operator-reply \
+  -H "Content-Type: application/json" \
+  -d '{
+    "emailContent": "Confirmed! Booking #12345. Tour confirmed for 8:00 AM on 2026-01-30. Total: $897.",
+    "fromEmail": "coralcrowntechnologies@gmail.com",
+    "subject": "Re: New Helicopter Tour Booking Request - HTO-BYXUNT",
+    "refCode": "HTO-BYXUNT"
+  }'
+```
+
+**Option B: Set up n8n workflow (for production)**
+
+1. Create n8n workflow with IMAP Email trigger
+2. Monitor `bookings@helicoptertoursonoahu.com` inbox
+3. Filter emails from operator addresses
+4. Forward to `/api/operator-reply` endpoint
+
+**Test Scenarios:**
+
+**Scenario 1: Operator Confirms**
+- Reply email: "Confirmed! Booking #12345. Tour at 8:00 AM on 2026-01-30."
+- **Expected:** Customer receives confirmation email with booking details
+
+**Scenario 2: Operator Says "We'll Handle It"**
+- Reply email: "We'll contact the customer directly to confirm."
+- **Expected:** Customer receives email saying operator will contact them directly
+
+**Scenario 3: Operator Rejects**
+- Reply email: "Not available on that date. Available: 2026-02-01, 2026-02-02"
+- **Expected:** Customer receives email with alternative dates
+
+### 4. Verify Database Updates
+- Check Supabase `bookings` table
+- Verify status changed (pending → confirmed/awaiting_operator_response)
+- Check metadata for operator response
+
+### 5. Test Availability Check
+- Should trigger automatically after booking
+- Or manually: `POST /api/check-availability-and-followup` with `{ "refCode": "HTO-XXXXXX" }`
+- Verify follow-up email sent with time slots
 
 ---
 

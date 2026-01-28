@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase, updateBooking } from '@/lib/supabaseClient';
+import { supabase, updateBooking, getBookingByRefCode } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate } from '@/lib/database.types';
 import { bookingStatuses, operators } from '@/lib/constants'; // Import operators for operator selection
 import { parseOperatorReply } from '@/lib/openai';
@@ -42,10 +42,21 @@ export async function POST(request: NextRequest) {
     
     const validated = operatorReplySchema.parse(body);
 
-    // Find booking by bookingId or refCode (typed result to avoid 'never')
+    // Find booking by bookingId, refCode, or extract refCode from email content/subject
     type SelectOne = { data: BookingsRow | null; error: { message?: string } | null };
     let booking: BookingsRow | null = null;
     let bookingError: { message?: string } | null = null;
+
+    // Try to extract refCode from email subject or content if not provided
+    let refCodeToSearch = validated.refCode;
+    if (!refCodeToSearch) {
+      // Look for HTO-XXXXXX pattern in subject or content
+      const refCodeMatch = (validated.subject || validated.emailContent || '').match(/HTO-[A-Z0-9]{6}/);
+      if (refCodeMatch) {
+        refCodeToSearch = refCodeMatch[0];
+        console.log('Extracted refCode from email:', refCodeToSearch);
+      }
+    }
 
     if (validated.bookingId) {
       const result = await supabase
@@ -55,16 +66,13 @@ export async function POST(request: NextRequest) {
         .single() as SelectOne;
       booking = result.data;
       bookingError = result.error;
-    } else if (validated.refCode) {
-      const res = await supabase
-        .from('bookings')
-        .select('*')
-        .contains('metadata', { ref_code: validated.refCode })
-        .order('created_at', { ascending: false })
-        .limit(1) as { data: BookingsRow[] | null; error: { message?: string } | null };
-      booking = (res.data ?? [])[0] ?? null;
-      bookingError = res.error;
+    } else if (refCodeToSearch) {
+      // Use getBookingByRefCode helper
+      const result = await getBookingByRefCode(refCodeToSearch);
+      booking = result.data;
+      bookingError = result.error;
     } else {
+      // Try to find by operator email and most recent booking
       const result = await supabase
         .from('bookings')
         .select('*')
@@ -119,7 +127,7 @@ export async function POST(request: NextRequest) {
 
       // Send confirmation to customer
       if (booking.customer_email && booking.customer_name) {
-        await sendConfirmationToCustomer({
+        const confirmResult = await sendConfirmationToCustomer({
           customerEmail: booking.customer_email,
           customerName: booking.customer_name,
           bookingDetails: {
@@ -131,6 +139,55 @@ export async function POST(request: NextRequest) {
           },
           confirmationNumber: parsed.confirmationNumber,
         });
+        if (confirmResult.success) {
+          console.log('Confirmation email sent to customer:', booking.customer_email);
+        } else {
+          console.error('Confirmation email failed:', confirmResult.error);
+        }
+      }
+    } else if (parsed.willHandleDirectly) {
+      // Operator says they'll contact customer directly
+      newStatus = bookingStatuses.AWAITING_OPERATOR_RESPONSE;
+      updateData.status = newStatus;
+      updateData.metadata = {
+        ...prevMeta,
+        operatorWillHandleDirectly: true,
+        operatorResponse: parsed.notes,
+        operatorContactedAt: new Date().toISOString(),
+      };
+
+      // Notify customer that operator will contact them directly
+      if (booking.customer_email && booking.customer_name) {
+        const notifyResult = await sendEmail({
+          to: booking.customer_email,
+          subject: `Booking Update - ${booking.ref_code || 'Your Tour'}`,
+          text: `Dear ${booking.customer_name},\n\nGreat news! ${validated.operatorName || booking.operator_name || 'The operator'} has received your booking request and will contact you directly to confirm your tour details and finalize your booking.\n\nYou can expect to hear from them soon with:\n- Confirmed time slot\n- Final pricing\n- Meeting location and instructions\n\nIf you have any questions in the meantime, feel free to reply to this email or call us at (707) 381-2583.\n\nBest regards,\nHelicopter Tours on Oahu\n\nReference Code: ${booking.ref_code || 'N/A'}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1a73e8;">Booking Update - ${booking.ref_code || 'Your Tour'}</h2>
+              <p>Dear ${booking.customer_name},</p>
+              <p>Great news! <strong>${validated.operatorName || booking.operator_name || 'The operator'}</strong> has received your booking request and will contact you directly to confirm your tour details and finalize your booking.</p>
+              <div style="background-color: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 16px; margin: 20px 0;">
+                <p style="margin: 0; color: #0c4a6e;"><strong>What to Expect:</strong></p>
+                <ul style="color: #075985; margin: 8px 0 0 20px;">
+                  <li>Confirmed time slot</li>
+                  <li>Final pricing</li>
+                  <li>Meeting location and instructions</li>
+                </ul>
+              </div>
+              <p>If you have any questions in the meantime, feel free to reply to this email or call us at <strong><a href="tel:+17073812583">(707) 381-2583</a></strong>.</p>
+              <p>Best regards,<br><strong>Helicopter Tours on Oahu</strong></p>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                Reference Code: <strong>${booking.ref_code || 'N/A'}</strong>
+              </p>
+            </div>
+          `,
+        });
+        if (notifyResult.success) {
+          console.log('Customer notified that operator will handle directly:', booking.customer_email);
+        } else {
+          console.error('Customer notification failed:', notifyResult.error);
+        }
       }
     } else if (parsed.isRejection) {
       newStatus = bookingStatuses.CANCELLED;

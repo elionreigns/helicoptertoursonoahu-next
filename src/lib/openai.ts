@@ -169,6 +169,7 @@ Return JSON only with this structure:
 export async function parseOperatorReply(content: string): Promise<{
   isConfirmation: boolean;
   isRejection: boolean;
+  willHandleDirectly: boolean; // Operator says they'll contact customer directly
   confirmationNumber?: string;
   availableDates?: string[];
   price?: number;
@@ -181,17 +182,24 @@ export async function parseOperatorReply(content: string): Promise<{
         {
           role: 'system',
           content: `You are parsing operator replies for helicopter tour bookings. Extract:
-1. Is this a confirmation? (isConfirmation: boolean)
-2. Is this a rejection? (isRejection: boolean)
-3. Confirmation number if present
-4. Available dates mentioned
-5. Price quoted
-6. Any notes or special instructions
+1. Is this a confirmation? (isConfirmation: boolean) - operator confirms booking is set
+2. Is this a rejection? (isRejection: boolean) - operator says not available
+3. Will operator handle directly? (willHandleDirectly: boolean) - operator says "we'll contact them", "we'll handle it", "we'll reach out", etc.
+4. Confirmation number if present
+5. Available dates mentioned
+6. Price quoted
+7. Any notes or special instructions
+
+Examples:
+- "Confirmed! Booking #12345" → isConfirmation: true
+- "We'll contact the customer directly" → willHandleDirectly: true
+- "Not available on that date" → isRejection: true
 
 Return JSON only:
 {
   "isConfirmation": boolean,
   "isRejection": boolean,
+  "willHandleDirectly": boolean,
   "confirmationNumber": string | null,
   "availableDates": string[] | null,
   "price": number | null,
@@ -208,12 +216,21 @@ Return JSON only:
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
-    return result;
+    return {
+      isConfirmation: result.isConfirmation || false,
+      isRejection: result.isRejection || false,
+      willHandleDirectly: result.willHandleDirectly || false,
+      confirmationNumber: result.confirmationNumber || undefined,
+      availableDates: result.availableDates || undefined,
+      price: result.price || undefined,
+      notes: result.notes || undefined,
+    };
   } catch (error) {
     console.error('OpenAI parsing error:', error);
     return {
       isConfirmation: false,
       isRejection: false,
+      willHandleDirectly: false,
     };
   }
 }
