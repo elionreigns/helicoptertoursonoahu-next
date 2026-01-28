@@ -79,8 +79,16 @@ export default function BookingChatbot() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const islands = getUniqueIslands();
-  const phoneTel = VAPI_PHONE_NUMBER.replace(/\D/g, '');
-  const phoneHref = phoneTel ? `tel:+1${phoneTel}` : 'tel:+17073812583';
+  const phoneDigits = VAPI_PHONE_NUMBER.replace(/\D/g, '');
+  // Avoid double "1": if number already has US country code (11 digits starting with 1), use as-is; else prepend 1
+  const phoneHref =
+    phoneDigits.length === 11 && phoneDigits.startsWith('1')
+      ? `tel:+${phoneDigits}`
+      : phoneDigits.length === 10
+        ? `tel:+1${phoneDigits}`
+        : phoneDigits
+          ? `tel:+${phoneDigits}`
+          : 'tel:+17073812583';
 
   useEffect(() => {
     scrollToBottom();
