@@ -153,6 +153,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert booking into Supabase (typed client; no casts)
+    const now = new Date().toISOString();
     const insertPayload: BookingsInsert = {
       ref_code: refCode,
       customer_name: validated.name,
@@ -168,6 +169,7 @@ export async function POST(request: NextRequest) {
       source: validated.source,
       status: 'pending',
       operator_name: operator.name,
+      updated_at: now,
       metadata: {
         ...(paymentMetadata && { payment: paymentMetadata }),
         ...(availabilityResult && { availability_check: availabilityResult }),
@@ -178,8 +180,9 @@ export async function POST(request: NextRequest) {
 
     if (dbError || !booking) {
       console.error('Database error:', dbError);
+      const details = dbError?.message ?? dbError?.code ?? null;
       return NextResponse.json(
-        { success: false, error: 'Failed to create booking', details: dbError?.message },
+        { success: false, error: 'Failed to create booking', details },
         { status: 500 }
       );
     }

@@ -152,9 +152,11 @@ export default function BookingForm() {
         // Redirect to success page
         router.push(`/bookings/success?ref_code=${result.ref_code}`);
       } else {
+        const msg = result.error || 'Failed to submit booking request. Please try again.';
+        const detail = result.details ? ` — ${result.details}` : '';
         setSubmitResult({
           success: false,
-          message: result.error || 'Failed to submit booking request. Please try again.',
+          message: msg + detail,
         });
       }
     } catch (error) {
