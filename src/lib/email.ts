@@ -8,27 +8,29 @@ import { emails } from './constants';
  * Required env vars: SITE5_SMTP_HOST, SITE5_SMTP_PORT, SITE5_EMAIL_USERNAME, SITE5_EMAIL_PASSWORD
  */
 const createTransporter = () => {
-  const smtpHost = process.env.SITE5_SMTP_HOST;
-  const smtpPort = process.env.SITE5_SMTP_PORT ? parseInt(process.env.SITE5_SMTP_PORT) : 587;
-  const smtpUser = process.env.SITE5_EMAIL_USERNAME;
+  const smtpHost = process.env.SITE5_SMTP_HOST?.trim();
+  const smtpPort = process.env.SITE5_SMTP_PORT ? parseInt(process.env.SITE5_SMTP_PORT, 10) : 587;
+  const smtpUser = process.env.SITE5_EMAIL_USERNAME?.trim();
   const smtpPassword = process.env.SITE5_EMAIL_PASSWORD;
-  const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
 
   if (!smtpHost || !smtpUser || !smtpPassword) {
     throw new Error('Missing required SMTP environment variables: SITE5_SMTP_HOST, SITE5_EMAIL_USERNAME, SITE5_EMAIL_PASSWORD');
   }
 
+  const secure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+
   return nodemailer.createTransport({
     host: smtpHost,
     port: smtpPort,
-    secure: smtpSecure, // true for 465, false for other ports
+    secure,
     auth: {
       user: smtpUser,
       pass: smtpPassword,
     },
-    // Site5 specific settings
+    connectionTimeout: 15000,
+    greetingTimeout: 10000,
     tls: {
-      rejectUnauthorized: false, // Some Site5 servers may have self-signed certificates
+      rejectUnauthorized: false,
     },
   });
 };
@@ -218,8 +220,13 @@ Helicopter Tours on Oahu
     </div>
   `;
 
+  // Send to operator and to bookings hub so you always get a copy at bookings@
+  const toAddresses = [operatorEmail];
+  if (emails.bookingsHub && !toAddresses.includes(emails.bookingsHub)) {
+    toAddresses.push(emails.bookingsHub);
+  }
   return sendEmail({
-    to: operatorEmail,
+    to: toAddresses,
     subject,
     text,
     html,

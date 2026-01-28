@@ -6,6 +6,8 @@ import { operators } from '@/lib/constants'; // Import operators for operator se
 import { sendBookingRequestToOperator, sendConfirmationToCustomer } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 
+export const maxDuration = 30;
+
 /**
  * IMPORTANT: Operator selection uses operators from constants.ts
  * To update operator emails, edit src/lib/constants.ts
@@ -211,7 +213,7 @@ export async function POST(request: NextRequest) {
 
     // Send booking request email to operator (includes availability results and payment if provided)
     try {
-      await sendBookingRequestToOperator({
+      const operatorResult = await sendBookingRequestToOperator({
         operatorEmail: operator.email,
         operatorName: operator.name,
         bookingDetails: {
@@ -230,18 +232,19 @@ export async function POST(request: NextRequest) {
         paymentDetails: paymentDetailsForOperator, // Full payment details (forwarded securely, not stored)
         refCode: refCode,
       });
-      console.log('Booking request email sent to operator:', operator.email);
-      
-      // After sending email, clear payment details from memory (they're in email, not stored)
+      if (operatorResult.success) {
+        console.log('Booking request email sent to operator:', operator.email);
+      } else {
+        console.error('Booking request email failed:', operatorResult.error);
+      }
       paymentDetailsForOperator = null;
     } catch (error) {
       console.error('Error sending booking request email to operator:', error);
-      // Don't fail the booking if email fails
     }
 
     // Send confirmation email to customer
     try {
-      await sendConfirmationToCustomer({
+      const confirmResult = await sendConfirmationToCustomer({
         customerEmail: validated.email,
         customerName: validated.name,
         bookingDetails: {
@@ -252,10 +255,13 @@ export async function POST(request: NextRequest) {
         confirmationNumber: refCode,
         hasPayment: !!validated.payment,
       });
-      console.log('Confirmation email sent to customer:', validated.email);
+      if (confirmResult.success) {
+        console.log('Confirmation email sent to customer:', validated.email);
+      } else {
+        console.error('Confirmation email failed:', confirmResult.error);
+      }
     } catch (error) {
       console.error('Error sending confirmation email to customer:', error);
-      // Don't fail the booking if email fails
     }
 
     // Call n8n webhook if configured
