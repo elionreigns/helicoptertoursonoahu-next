@@ -106,7 +106,6 @@ export async function checkAvailabilityBrowserbase({
       },
       body: JSON.stringify({
         projectId: browserbaseProjectId,
-        headless: true,
       }),
     });
 
