@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { VAPI_PHONE_NUMBER } from '@/lib/constants';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -74,7 +75,7 @@ export default function BookingChatbot() {
       if (email) {
         addMessage('assistant', `I notice you haven't responded in a while. If you'd like, I can email you directly at ${email} with booking information. Would you like me to do that, or would you prefer to continue chatting?`);
       } else {
-        addMessage('assistant', 'I notice you haven\'t responded in a while. Would you like to continue, or would you prefer to call us at (808) 994-9034?');
+        addMessage('assistant', `I notice you haven't responded in a while. Would you like to continue, or would you prefer to call us at ${VAPI_PHONE_NUMBER}?`);
       }
     }, TIMEOUT_MS);
   };
@@ -147,7 +148,7 @@ export default function BookingChatbot() {
       }
     } catch (error) {
       setIsTyping(false);
-      addMessage('assistant', 'Sorry, I encountered an error. Please try again or call us at (808) 994-9034 for immediate assistance.');
+      addMessage('assistant', `Sorry, I encountered an error. Please try again or call us at ${VAPI_PHONE_NUMBER} for immediate assistance.`);
       console.error('Chatbot error:', error);
     }
   };
@@ -208,7 +209,7 @@ export default function BookingChatbot() {
       }
     } catch (error) {
       setIsProcessingBooking(false);
-      addMessage('assistant', 'I encountered an error submitting your booking. Please call us at (808) 994-9034 or try again later.');
+      addMessage('assistant', `I encountered an error submitting your booking. Please call us at ${VAPI_PHONE_NUMBER} or try again later.`);
       console.error('Booking submission error:', error);
     }
   };
