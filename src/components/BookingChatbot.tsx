@@ -32,6 +32,7 @@ export default function BookingChatbot() {
   const [bookingData, setBookingData] = useState<BookingData>({});
   const [isProcessingBooking, setIsProcessingBooking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -42,13 +43,24 @@ export default function BookingChatbot() {
   useEffect(() => {
     if (isOpen) {
       resetTimeout();
+      // Auto-focus email input when chat opens and email is required
+      if (showEmailInput && emailInputRef.current) {
+        setTimeout(() => emailInputRef.current?.focus(), 100);
+      }
+    } else {
+      // Reset state when chat closes so it asks for email again next time
+      setEmail('');
+      setShowEmailInput(true);
+      setInput('');
+      setMessages([{ role: 'assistant', content: 'Aloha! 👋 I\'m here to help you book your helicopter tour. Please enter your email address to get started.' }]);
+      setBookingData({});
     }
     return () => {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, [isOpen, messages]);
+  }, [isOpen, showEmailInput]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -294,16 +306,24 @@ export default function BookingChatbot() {
             {showEmailInput ? (
               <div className="flex gap-2">
                 <input
+                  ref={emailInputRef}
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleEmailSubmit()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleEmailSubmit();
+                    }
+                  }}
                   placeholder="Enter your email to start chatting..."
                   className="flex-1 border border-gray-300 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
                 />
                 <button
                   onClick={handleEmailSubmit}
                   className="bg-blue-600 text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-blue-700 transition-colors"
+                  type="button"
                 >
                   →
                 </button>
