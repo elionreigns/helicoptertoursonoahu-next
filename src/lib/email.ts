@@ -36,7 +36,52 @@ const createTransporter = () => {
 };
 
 /**
- * Send email via SMTP
+ * Send email via Resend API when RESEND_API_KEY is set; otherwise via SMTP.
+ * Resend bypasses shared-host SMTP auth issues. Set RESEND_API_KEY in Vercel;
+ * optional RESEND_FROM e.g. "Helicopter Tours <bookings@helicoptertoursonoahu.com>"
+ * after verifying domain, or omit to use onboarding@resend.dev for testing.
+ */
+async function sendViaResend(
+  to: string | string[],
+  subject: string,
+  from: string,
+  replyTo: string | undefined,
+  text?: string,
+  html?: string
+): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY?.trim();
+  if (!apiKey) return { success: false, error: 'RESEND_API_KEY not set' };
+
+  const toArray = Array.isArray(to) ? to : [to];
+  const fromAddr = process.env.RESEND_FROM?.trim() || from || 'Helicopter Tours on Oahu <onboarding@resend.dev>';
+  const body: Record<string, unknown> = {
+    from: fromAddr,
+    to: toArray,
+    subject,
+    reply_to: replyTo || fromAddr,
+  };
+  if (html) body.html = html;
+  if (text) body.text = text;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+  const data = (await res.json()) as { id?: string; message?: string };
+  if (!res.ok) {
+    const err = data?.message || res.statusText || 'Resend API error';
+    console.error('Resend API error:', res.status, err);
+    return { success: false, error: err };
+  }
+  return { success: true, messageId: data?.id };
+}
+
+/**
+ * Send email via SMTP or Resend (when RESEND_API_KEY is set).
  */
 export async function sendEmail({
   to,
@@ -53,23 +98,24 @@ export async function sendEmail({
   from?: string;
   replyTo?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const fromEmail = from || emails.bookingsHub;
+  const replyToEmail = replyTo || fromEmail;
+
+  if (process.env.RESEND_API_KEY?.trim()) {
+    return sendViaResend(to, subject, fromEmail, replyToEmail, text, html);
+  }
+
   try {
     const transporter = createTransporter();
-    const fromEmail = from || emails.bookingsHub;
-
     const info = await transporter.sendMail({
       from: fromEmail,
       to: Array.isArray(to) ? to.join(', ') : to,
       subject,
       text,
       html,
-      replyTo: replyTo || fromEmail,
+      replyTo: replyToEmail,
     });
-
-    return {
-      success: true,
-      messageId: info.messageId,
-    };
+    return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email send error:', error);
     return {

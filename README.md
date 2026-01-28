@@ -232,12 +232,18 @@ Set these in Vercel Dashboard → Project Settings → Environment Variables:
 - `VAPI_API_KEY` - Vapi API key for phone agent
 - `VAPI_ASSISTANT_ID` - Vapi assistant ID: `2ed16509-a321-4f09-84d8-bf1fcfe42438`
 
-**Email (Site5 SMTP/IMAP):**
-- `SITE5_SMTP_HOST` - Site5 SMTP host (e.g., `mail.helicoptertoursonoahu.com`)
-- `SITE5_SMTP_PORT` - SMTP port (usually `587` or `465`)
-- `SITE5_EMAIL_USERNAME` - Email address (e.g., `bookings@helicoptertoursonoahu.com`)
-- `SITE5_EMAIL_PASSWORD` - SMTP password
-- `SITE5_IMAP_HOST` - Site5 IMAP host (for receiving emails via n8n workflow)
+**Email – use one of:**
+
+*Option A – Resend (recommended if SMTP gives 535 auth errors):*
+- `RESEND_API_KEY` - API key from [resend.com](https://resend.com). When set, all booking/confirmation emails send via Resend instead of SMTP.
+- `RESEND_FROM` (optional) - e.g. `Helicopter Tours <bookings@helicoptertoursonoahu.com>`. Set after verifying your domain in Resend; omit to use `onboarding@resend.dev` for testing.
+
+*Option B – Site5 SMTP/IMAP:*
+- `SITE5_SMTP_HOST` - SMTP host (e.g. `shared11.accountservergroup.com`)
+- `SITE5_SMTP_PORT` - SMTP port (`587` or `465`)
+- `SITE5_EMAIL_USERNAME` - Full email (e.g. `bookings@helicoptertoursonoahu.com`)
+- `SITE5_EMAIL_PASSWORD` - Mailbox password
+- `SITE5_IMAP_HOST` - IMAP host (for receiving via n8n)
 - `SITE5_IMAP_PORT` - IMAP port (usually `993`)
 
 **Browser Automation (Optional):**
