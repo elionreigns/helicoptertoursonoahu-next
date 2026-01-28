@@ -418,6 +418,7 @@ export default function BookingChatbot() {
   };
 
   const currentField = step === 'booking' ? BOOKING_FIELDS[bookingFieldIndex] : null;
+  const showFooter = step === 'chat' || step === 'booking';
   const showTextInput = step === 'chat' || (step === 'booking' && currentField && ['text', 'email', 'tel', 'number', 'date'].includes(currentField.type));
 
   return (
@@ -524,7 +525,7 @@ export default function BookingChatbot() {
             <div ref={messagesEndRef} />
           </div>
 
-          {(showTextInput || (step === 'booking' && currentField?.type === 'select')) && (
+          {showFooter && (
             <div className="p-3 border-t border-gray-200 bg-white shrink-0">
               {step === 'booking' && currentField?.type === 'select' && (
                 <div className="flex flex-wrap gap-2 mb-2">
