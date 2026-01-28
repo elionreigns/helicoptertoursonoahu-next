@@ -164,7 +164,18 @@ export async function POST(request: NextRequest) {
               specialRequests: booking.special_requests || undefined,
               totalWeight: booking.total_weight || undefined,
             },
-            availabilityResult: prevMeta.availability_check as object | undefined,
+            availabilityResult:
+              prevMeta.availability_check != null &&
+              typeof prevMeta.availability_check === 'object' &&
+              'available' in prevMeta.availability_check
+                ? (prevMeta.availability_check as {
+                    available: boolean;
+                    availableSlots?: Array<{ time: string; price?: number; available: boolean }>;
+                    details?: any;
+                    error?: string;
+                    source?: string;
+                  })
+                : undefined,
             refCode: booking.ref_code || undefined,
             tourName,
             totalPrice,
