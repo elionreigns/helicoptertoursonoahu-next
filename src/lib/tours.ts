@@ -250,3 +250,17 @@ export function calculateTotalPrice(tourId: string, partySize: number): number {
 export function getToursByIsland(island: string): Tour[] {
   return tours.filter(tour => tour.island === island);
 }
+
+/** Unique islands we have tours for (for chatbot island selector) */
+export function getUniqueIslands(): string[] {
+  const set = new Set(tours.map(t => t.island));
+  return Array.from(set).sort();
+}
+
+/** Get tours for a specific island and operator (for chatbot tour list) */
+export function getToursByIslandAndOperator(
+  island: string,
+  operator: 'blueHawaiian' | 'rainbow'
+): Tour[] {
+  return tours.filter(t => t.island === island && t.operator === operator);
+}
