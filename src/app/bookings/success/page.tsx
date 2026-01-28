@@ -16,6 +16,8 @@ interface BookingSuccessData {
   doors_off: boolean;
   hotel: string | null;
   operator?: string;
+  tour_name?: string;
+  total_price?: number;
 }
 
 function BookingSuccessContent() {
@@ -186,11 +188,27 @@ function BookingSuccessContent() {
               </div>
             )}
 
-            {bookingData.operator && (
-              <div className="flex justify-between items-start py-3">
-                <span className="font-medium text-gray-700">Operator:</span>
-                <span className="text-gray-900 text-right">{bookingData.operator}</span>
-              </div>
+            {(bookingData.operator || bookingData.tour_name != null || bookingData.total_price != null) && (
+              <>
+                {bookingData.operator && (
+                  <div className="flex justify-between items-start py-3 border-b border-gray-200">
+                    <span className="font-medium text-gray-700">Operator:</span>
+                    <span className="text-gray-900 text-right">{bookingData.operator}</span>
+                  </div>
+                )}
+                {bookingData.tour_name && (
+                  <div className="flex justify-between items-start py-3 border-b border-gray-200">
+                    <span className="font-medium text-gray-700">Tour:</span>
+                    <span className="text-gray-900 text-right">{bookingData.tour_name}</span>
+                  </div>
+                )}
+                {bookingData.total_price != null && bookingData.total_price > 0 && (
+                  <div className="flex justify-between items-start py-3">
+                    <span className="font-medium text-gray-700">Total Price:</span>
+                    <span className="text-gray-900 text-right font-semibold">${bookingData.total_price.toLocaleString()}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

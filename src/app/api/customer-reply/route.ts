@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, insertBooking, updateBooking, type InsertBookingResult } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
-import { bookingStatuses } from '@/lib/constants';
-import { analyzeEmail } from '@/lib/openai';
-import { sendEmail } from '@/lib/email';
+import { bookingStatuses, operators } from '@/lib/constants';
+import { analyzeEmail, analyzeCustomerAvailabilityReply } from '@/lib/openai';
+import { sendEmail, sendBookingRequestToOperator } from '@/lib/email';
+import { getTourById, calculateTotalPrice } from '@/lib/tours';
 
 const customerReplySchema = z.object({
   emailContent: z.string(),
@@ -102,10 +103,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const prevMeta = booking?.metadata ?? {};
+    const prevMeta = (booking?.metadata ?? {}) as Record<string, unknown>;
     const prevMessages = Array.isArray(prevMeta.customerMessages)
       ? prevMeta.customerMessages
       : [];
+    const operatorEmailSentAt = prevMeta.operator_email_sent_at as string | undefined;
+    const operatorProposedTime = prevMeta.operator_proposed_time as string | undefined;
 
     const updateData: BookingsUpdate = {
       updated_at: new Date().toISOString(),
@@ -127,6 +130,56 @@ export async function POST(request: NextRequest) {
       if (analysis.extractedData.doorsOff !== undefined) updateData.doors_off = analysis.extractedData.doorsOff;
       if (analysis.extractedData.hotel) updateData.hotel = analysis.extractedData.hotel;
       if (analysis.extractedData.specialRequests) updateData.special_requests = analysis.extractedData.specialRequests;
+    }
+
+    // If customer is confirming a time (Blue Hawaiian: chosen slot; Rainbow: confirm proposed time), send full booking to operator
+    const opKey = booking.operator_name?.toLowerCase().includes('rainbow') ? 'rainbow' : 'blueHawaiian';
+    const operator = operators[opKey];
+    if (operator && !operatorEmailSentAt) {
+      const availabilityReply = await analyzeCustomerAvailabilityReply(validated.emailContent);
+      const shouldSendToOperator =
+        (opKey === 'blueHawaiian' && availabilityReply.chosenTimeSlot) ||
+        (opKey === 'rainbow' && availabilityReply.confirmsProposedTime && operatorProposedTime);
+
+      if (shouldSendToOperator) {
+        const tourId = (prevMeta.tour_id as string) || (prevMeta.tour_name as string);
+        const tour = tourId ? getTourById(tourId) : undefined;
+        const tourName = (prevMeta.tour_name as string) || tour?.name || 'Helicopter Tour';
+        const totalPrice = tour ? calculateTotalPrice(tour.id, booking.party_size || 2) : undefined;
+        const confirmedTime = opKey === 'blueHawaiian' ? availabilityReply.chosenTimeSlot : operatorProposedTime;
+
+        try {
+          const sendResult = await sendBookingRequestToOperator({
+            operatorEmail: operator.email,
+            operatorName: operator.name,
+            bookingDetails: {
+              customerName: booking.customer_name || 'Customer',
+              customerEmail: booking.customer_email || '',
+              customerPhone: booking.customer_phone || 'Not provided',
+              partySize: booking.party_size || 2,
+              preferredDate: booking.preferred_date || '',
+              timeWindow: confirmedTime || booking.time_window || undefined,
+              doorsOff: booking.doors_off ?? false,
+              hotel: booking.hotel || undefined,
+              specialRequests: booking.special_requests || undefined,
+              totalWeight: booking.total_weight || undefined,
+            },
+            availabilityResult: prevMeta.availability_check as object | undefined,
+            refCode: booking.ref_code || undefined,
+            tourName,
+            totalPrice,
+          });
+          if (sendResult.success) {
+            (updateData.metadata as Record<string, unknown>).operator_email_sent_at = new Date().toISOString();
+            (updateData.metadata as Record<string, unknown>).confirmed_time = confirmedTime;
+            console.log('Full booking sent to operator after customer confirmed time:', operator.email);
+          } else {
+            console.error('Failed to send booking to operator:', sendResult.error);
+          }
+        } catch (err) {
+          console.error('Error sending booking to operator:', err);
+        }
+      }
     }
 
     const { error: updateError } = await updateBooking(booking.id, updateData);

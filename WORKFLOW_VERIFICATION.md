@@ -2,6 +2,10 @@
 
 This document verifies that the booking workflow is implemented correctly and working as intended.
 
+**Authoritative flow description:** See **WORKFLOW.md** for how the system is supposed to work end-to-end (Blue Hawaiian vs Rainbow, when operator gets full booking, follow-up API + Vercel bypass, metadata).
+
+---
+
 ## ✅ Step 1: Customer Submits Booking Request
 
 **Status:** ✅ WORKING
@@ -25,26 +29,24 @@ This document verifies that the booking workflow is implemented correctly and wo
 
 ## ✅ Step 2: Initial Confirmation Emails
 
-**Status:** ✅ WORKING (Recently Fixed)
+**Status:** ✅ WORKING (Flow differs by operator)
 
 **Implementation:**
-- ✅ Customer confirmation email sent immediately
-- ✅ Operator inquiry email sent immediately
-- ✅ Both emails now include:
-  - Tour name ✅
-  - Total price ✅
-  - Operator name ✅
-  - All booking details ✅
+- ✅ Customer confirmation email sent immediately (tour, operator, price, **phone number**)
+- ✅ **Blue Hawaiian:** No email to operator on submit; operator gets full booking only after customer replies with chosen time (see customer-reply).
+- ✅ **Rainbow:** Availability inquiry only to operator ("What times do you have on [date]?"); full booking sent only after Rainbow proposes a time and customer confirms (see operator-reply + customer-reply).
+- ✅ Operator emails sent to operator only; separate copy to `bookings@` (subject "Copy: …").
+- ✅ All from `bookings@helicoptertoursonoahu.com`; addresses in `src/lib/constants.ts`.
 
 **Verification:**
-- [x] Customer receives email with tour name and price
-- [x] Operator receives email with tour name and price
-- [x] `bookings@helicoptertoursonoahu.com` receives copy
-- [x] Emails sent via Resend API
+- [x] Customer receives email with tour name, price, and phone number
+- [x] Rainbow test address receives availability inquiry on Rainbow booking
+- [x] Blue Hawaiian test address receives nothing on submit; receives full booking only after customer confirms time
+- [x] `bookings@` receives copy of operator emails
 
 **Files:**
-- `src/lib/email.ts` - `sendConfirmationToCustomer()` and `sendBookingRequestToOperator()`
-- `src/app/api/new-booking-request/route.ts` - Calls email functions
+- `src/lib/email.ts` - `sendConfirmationToCustomer()`, `sendBookingRequestToOperator()`, `sendRainbowAvailabilityInquiry()`
+- `src/app/api/new-booking-request/route.ts` - Branch by operator; Rainbow → inquiry only
 
 ---
 

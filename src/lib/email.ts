@@ -1,6 +1,10 @@
 import 'server-only';
 import nodemailer from 'nodemailer';
-import { emails } from './constants';
+import { emails, VAPI_PHONE_NUMBER } from './constants';
+
+/** Reply-To for inbound: use env so you can set Resend's free .resend.app address without code change or paying for another domain. Exported for use in API routes that send email directly. */
+export const replyToInbound = () =>
+  process.env.REPLY_TO_INBOUND?.trim() || emails.bookingsHubInbound || emails.bookingsHub;
 
 /**
  * Email transporter configuration for Site5 email
@@ -274,19 +278,117 @@ Helicopter Tours on Oahu
     </div>
   `;
 
-  // Send to operator and to bookings hub so you always get a copy at bookings@
-  const toAddresses = [operatorEmail];
-  if (emails.bookingsHub && !toAddresses.includes(emails.bookingsHub)) {
-    toAddresses.push(emails.bookingsHub);
-  }
-  return sendEmail({
-    to: toAddresses,
+  // Send to operator only (single recipient for reliable delivery from bookings@)
+  const result = await sendEmail({
+    to: operatorEmail,
     subject,
     text,
     html,
     from: emails.bookingsHub,
-    replyTo: emails.testAgent,
+    replyTo: replyToInbound(),
   });
+  // Send a copy to bookings hub for records (separate email so operator is sole recipient)
+  if (result.success && emails.bookingsHub && emails.bookingsHub !== operatorEmail) {
+    await sendEmail({
+      to: emails.bookingsHub,
+      subject: `Copy: ${subject}`,
+      text,
+      html,
+      from: emails.bookingsHub,
+      replyTo: replyToInbound(),
+    });
+  }
+  return result;
+}
+
+/**
+ * Send availability inquiry to Rainbow Helicopters (not full booking).
+ * Asks what times they have on the requested date; full booking is sent after customer confirms.
+ */
+export async function sendRainbowAvailabilityInquiry({
+  operatorEmail,
+  operatorName,
+  refCode,
+  customerName,
+  preferredDate,
+  partySize,
+  tourName,
+  totalWeight,
+  doorsOff,
+  hotel,
+}: {
+  operatorEmail: string;
+  operatorName: string;
+  refCode: string;
+  customerName: string;
+  preferredDate: string;
+  partySize: number;
+  tourName?: string;
+  totalWeight?: number;
+  doorsOff?: boolean;
+  hotel?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const subject = `Availability inquiry ${refCode} - ${customerName} - ${preferredDate}`;
+  const dateFormatted = new Date(preferredDate + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const text = `
+Availability inquiry – we have a customer interested in booking with ${operatorName}.
+
+Reference: ${refCode}
+Customer: ${customerName}
+Preferred date: ${dateFormatted}
+Party size: ${partySize}
+${tourName ? `Tour: ${tourName}` : ''}
+${totalWeight ? `Total weight: ${totalWeight} lbs` : ''}
+${doorsOff ? 'Doors-off: Yes' : ''}
+${hotel ? `Hotel: ${hotel}` : ''}
+
+Please reply with what times you have available on this date. We will send full booking details and relay the confirmed time to the customer once they confirm.
+
+Thank you,
+Helicopter Tours on Oahu
+  `.trim();
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a73e8;">Availability inquiry – ${operatorName}</h2>
+      <p>We have a customer interested in booking. Please reply with available times for the date below.</p>
+      <p><strong>Reference:</strong> ${refCode}</p>
+      <p><strong>Customer:</strong> ${customerName}</p>
+      <p><strong>Preferred date:</strong> ${dateFormatted}</p>
+      <p><strong>Party size:</strong> ${partySize}</p>
+      ${tourName ? `<p><strong>Tour:</strong> ${tourName}</p>` : ''}
+      ${totalWeight ? `<p><strong>Total weight:</strong> ${totalWeight} lbs</p>` : ''}
+      ${doorsOff ? `<p>Doors-off: Yes</p>` : ''}
+      ${hotel ? `<p><strong>Hotel:</strong> ${hotel}</p>` : ''}
+      <p>We will send full booking details and confirm with the customer once you provide available times.</p>
+      <p>Thank you,<br>Helicopter Tours on Oahu</p>
+    </div>
+  `;
+
+  const res = await sendEmail({
+    to: operatorEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+  if (res.success && emails.bookingsHub && emails.bookingsHub !== operatorEmail) {
+    await sendEmail({
+      to: emails.bookingsHub,
+      subject: `Copy: ${subject}`,
+      text,
+      html,
+      from: emails.bookingsHub,
+      replyTo: replyToInbound(),
+    });
+  }
+  return res;
 }
 
 /**
@@ -335,7 +437,7 @@ ${bookingDetails.totalAmount ? `- Total Amount: $${bookingDetails.totalAmount.to
 ${paymentNote}
 We will contact you shortly with final confirmation${hasPayment ? ' and to verify your payment information' : ' and payment details'}.
 
-If you have any questions, please reply to this email or call us.
+If you have any questions, please reply to this email or call us at ${VAPI_PHONE_NUMBER}.
 
 Best regards,
 Helicopter Tours on Oahu
@@ -368,7 +470,7 @@ Helicopter Tours on Oahu
       <p>We will contact you shortly with final confirmation and payment details.</p>
       `}
       
-      <p>If you have any questions, please reply to this email or call us.</p>
+      <p>If you have any questions, please reply to this email or call us at <strong>${VAPI_PHONE_NUMBER}</strong>.</p>
       
       <p>Best regards,<br>Helicopter Tours on Oahu</p>
     </div>
@@ -380,7 +482,71 @@ Helicopter Tours on Oahu
     text,
     html,
     from: emails.bookingsHub,
-    replyTo: emails.testAgent,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
+ * Notify the internal agent to arrange with Rainbow Helicopters for a booking.
+ * Sent when we've emailed the client the "we're in contact with Rainbow" follow-up.
+ */
+export async function sendRainbowArrangeNotificationToAgent({
+  agentEmail,
+  refCode,
+  customerName,
+  customerEmail,
+  tourName,
+  date,
+  partySize,
+}: {
+  agentEmail: string;
+  refCode: string;
+  customerName: string;
+  customerEmail: string;
+  tourName: string;
+  date: string;
+  partySize: number;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const subject = `Arrange with Rainbow – ${refCode} – ${customerName}`;
+  const text = `
+Client wants Rainbow Helicopters tour – please arrange a time.
+
+Reference: ${refCode}
+Client: ${customerName} (${customerEmail})
+Tour: ${tourName}
+Preferred date: ${formattedDate}
+Party size: ${partySize}
+
+When Rainbow replies with a time, reply to that email (or use the operator-reply flow). We'll then notify the client that Rainbow has confirmed and is ready for payment. The client can reply with payment info if they haven't already; we'll relay that to Rainbow and confirm with the client.
+
+From: Helicopter Tours on Oahu
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #166534;">Arrange with Rainbow – ${refCode}</h2>
+      <p>Client wants a Rainbow Helicopters tour. Please arrange a time with Rainbow.</p>
+      <p><strong>Reference:</strong> ${refCode}</p>
+      <p><strong>Client:</strong> ${customerName} (<a href="mailto:${customerEmail}">${customerEmail}</a>)</p>
+      <p><strong>Tour:</strong> ${tourName}</p>
+      <p><strong>Preferred date:</strong> ${formattedDate}</p>
+      <p><strong>Party size:</strong> ${partySize}</p>
+      <p>When Rainbow replies with a time, we'll notify the client that Rainbow has confirmed and is ready for payment. The client can reply with payment info; we'll relay to Rainbow and confirm with the client.</p>
+      <p style="color: #64748b; font-size: 12px;">Helicopter Tours on Oahu</p>
+    </div>
+  `;
+  return sendEmail({
+    to: agentEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
   });
 }
 
@@ -581,6 +747,6 @@ Reference Code: ${refCode}
     text,
     html,
     from: emails.bookingsHub,
-    replyTo: emails.testAgent,
+    replyTo: replyToInbound(),
   });
 }

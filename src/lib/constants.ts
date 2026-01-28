@@ -16,8 +16,10 @@
  * 3. The system will automatically use the new operator in booking flows
  */
 export const emails = {
-  bookingsHub: "bookings@helicoptertoursonoahu.com",        // Main incoming email hub - receives all booking inquiries
-  testAgent: "ericbelievesinjesus@gmail.com",               // Agent email that handles client communication (for testing)
+  bookingsHub: "bookings@helicoptertoursonoahu.com",        // Main incoming email hub - used for From when sending
+  /** Reply-To for all outgoing emails so replies go here; set to subdomain where Resend Inbound receives (e.g. booking.helicoptertoursonoahu.com) */
+  bookingsHubInbound: "bookings@booking.helicoptertoursonoahu.com",
+  testAgent: "ericbelievesinjesusbecause@gmail.com",        // Agent email that handles client communication (for testing)
   testClient: "elionreigns@gmail.com",                      // Client email for testing purposes
   blueHawaiian: "coralcrowntechnologies@gmail.com",         // Blue Hawaiian Helicopters - UPDATE TO REAL EMAIL
   rainbow: "ashleydanielleschaefer@gmail.com",              // Rainbow Helicopters - UPDATE TO REAL EMAIL
@@ -25,6 +27,21 @@ export const emails = {
   // "magnum": "bookings@magnumhelicopters.com",
   // "georges": "bookings@georgesaviation.com",
 } as const;
+
+/** Addresses that must never receive the client follow-up ("Available Tour Times") — only the real client should get it. */
+const FOLLOW_UP_BLOCKED_EMAILS = [
+  emails.bookingsHub,
+  emails.bookingsHubInbound,
+  emails.testAgent,
+  emails.blueHawaiian,
+  emails.rainbow,
+] as const;
+
+/** Returns true if this email is an operator, hub, or internal address. Used to avoid sending client-only follow-up to the wrong recipient. */
+export function isOperatorOrInternalEmail(email: string): boolean {
+  const normalized = (email || '').trim().toLowerCase();
+  return FOLLOW_UP_BLOCKED_EMAILS.some((addr) => addr.toLowerCase() === normalized);
+}
 
 /**
  * Operator metadata

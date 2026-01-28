@@ -164,6 +164,49 @@ Return JSON only with this structure:
 }
 
 /**
+ * Analyze customer reply to availability follow-up: did they choose a time or confirm the proposed time?
+ * Used to decide when to send full booking to Blue Hawaiian (chosen time) or Rainbow (confirm).
+ */
+export async function analyzeCustomerAvailabilityReply(content: string): Promise<{
+  chosenTimeSlot?: string;   // e.g. "2:00 PM" – customer picked a slot (Blue Hawaiian)
+  confirmsProposedTime?: boolean;  // true if customer says yes/confirmed (Rainbow)
+}> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `You are analyzing a customer's email reply after they received availability options for a helicopter tour.
+1. If the customer is choosing or confirming a specific time slot (e.g. "2pm works", "I'll take the morning slot", "the 10am one"), set chosenTimeSlot to that time (e.g. "2:00 PM", "10:00 AM", "morning slot").
+2. If the customer is confirming a proposed time (e.g. "yes", "that works", "confirmed", "sounds good"), set confirmsProposedTime to true.
+
+Return JSON only:
+{
+  "chosenTimeSlot": string | null (the time they chose, or null),
+  "confirmsProposedTime": boolean
+}`,
+        },
+        {
+          role: 'user',
+          content: content,
+        },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    });
+    const result = JSON.parse(response.choices[0].message.content || '{}');
+    return {
+      chosenTimeSlot: result.chosenTimeSlot || undefined,
+      confirmsProposedTime: result.confirmsProposedTime === true,
+    };
+  } catch (error) {
+    console.error('analyzeCustomerAvailabilityReply error:', error);
+    return {};
+  }
+}
+
+/**
  * Parse operator reply to extract booking confirmation details
  */
 export async function parseOperatorReply(content: string): Promise<{

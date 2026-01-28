@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { insertBooking } from '@/lib/supabaseClient';
 import type { BookingsInsert } from '@/lib/database.types';
 import { operators } from '@/lib/constants'; // Import operators for operator selection
-import { sendBookingRequestToOperator, sendConfirmationToCustomer } from '@/lib/email';
+import { sendBookingRequestToOperator, sendConfirmationToCustomer, sendRainbowAvailabilityInquiry } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 
@@ -36,6 +36,7 @@ function generateRefCode(): string {
  */
 const bookingRequestSchema = z.object({
   name: z.string().min(1, 'Name is required'),
+  /** Client email for this booking only — used for confirmation, follow-up, and reply matching for this booking. */
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
   party_size: z.number().int().min(1).max(20, 'Party size must be between 1 and 20'),
@@ -172,6 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert booking into Supabase (typed client; no casts)
+    // The email from this form submission is stored as this booking's client — used only for this booking (confirmation, follow-up, reply matching).
     const now = new Date().toISOString();
     const insertPayload: BookingsInsert = {
       ref_code: refCode,
@@ -229,37 +231,38 @@ export async function POST(request: NextRequest) {
       has_payment: !!validated.payment, // Boolean flag (payment details not included in webhook)
     };
 
-    // Send booking request email to operator (includes availability results and payment if provided)
+    // Operator email flow:
+    // - Blue Hawaiian: do NOT email operator yet; we scrape live availability and send follow-up to customer.
+    //   When customer replies with chosen time, we then send full booking to Blue Hawaiian (see customer-reply).
+    // - Rainbow: send availability inquiry only ("what times do you have?"); when Rainbow replies with a time,
+    //   we email customer to confirm; when customer confirms, we send full booking to Rainbow (see operator-reply + customer-reply).
     try {
-      const operatorResult = await sendBookingRequestToOperator({
-        operatorEmail: operator.email,
-        operatorName: operator.name,
-        bookingDetails: {
+      if (operatorKey === 'rainbow') {
+        const inquiryResult = await sendRainbowAvailabilityInquiry({
+          operatorEmail: operator.email,
+          operatorName: operator.name,
+          refCode,
           customerName: validated.name,
-          customerEmail: validated.email,
-          customerPhone: validated.phone || 'Not provided',
-          partySize: validated.party_size,
           preferredDate: validated.preferred_date,
-          timeWindow: validated.time_window,
+          partySize: validated.party_size,
+          tourName: tourName,
+          totalWeight: validated.total_weight,
           doorsOff: validated.doors_off,
           hotel: validated.hotel,
-          specialRequests: validated.special_requests,
-          totalWeight: validated.total_weight,
-        },
-        availabilityResult: availabilityResult,
-        paymentDetails: paymentDetailsForOperator, // Full payment details (forwarded securely, not stored)
-        refCode: refCode,
-        tourName: tourName,
-        totalPrice: totalPrice,
-      });
-      if (operatorResult.success) {
-        console.log('Booking request email sent to operator:', operator.email);
-      } else {
-        console.error('Booking request email failed:', operatorResult.error);
+        });
+        if (inquiryResult.success) {
+          console.log('Rainbow availability inquiry sent to operator:', operator.email);
+        } else {
+          console.error('Rainbow availability inquiry failed:', inquiryResult.error);
+        }
+      }
+      // Blue Hawaiian: no operator email on booking; operator gets full details when customer confirms a time
+      if (operatorKey === 'blueHawaiian') {
+        console.log('Blue Hawaiian: operator will be emailed when customer confirms a time slot');
       }
       paymentDetailsForOperator = null;
     } catch (error) {
-      console.error('Error sending booking request email to operator:', error);
+      console.error('Error sending operator email:', error);
     }
 
     // Send confirmation email to customer
@@ -316,7 +319,15 @@ export async function POST(request: NextRequest) {
       || 'https://booking.helicoptertoursonoahu.com';
     
     const availabilityCheckUrl = `${appUrl}/api/check-availability-and-followup`;
-    
+    // Vercel Deployment Protection: bypass so server-to-server call reaches the API
+    const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (bypassSecret) {
+      headers['x-vercel-protection-bypass'] = bypassSecret;
+    } else if (process.env.VERCEL) {
+      console.warn('VERCEL_AUTOMATION_BYPASS_SECRET not set; follow-up API may return 401 if Deployment Protection is on. Enable Protection Bypass for Automation in Vercel project settings.');
+    }
+
     console.log(`Triggering availability check for ${refCode} via ${availabilityCheckUrl}`);
     
     // Use a more robust fetch with timeout and retry logic
@@ -327,7 +338,7 @@ export async function POST(request: NextRequest) {
         
         const response = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ refCode }),
           signal: controller.signal,
         });

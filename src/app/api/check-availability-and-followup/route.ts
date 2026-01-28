@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkAvailability } from '@/lib/browserAutomation';
-import { sendAvailabilityFollowUp } from '@/lib/email';
+import { sendAvailabilityFollowUp, sendRainbowArrangeNotificationToAgent } from '@/lib/email';
 import { getBookingByRefCode, updateBooking } from '@/lib/supabaseClient';
-import { bookingStatuses } from '@/lib/constants';
+import { bookingStatuses, emails, isOperatorOrInternalEmail } from '@/lib/constants';
 import { VAPI_PHONE_NUMBER } from '@/lib/constants';
 import { getTourById } from '@/lib/tours';
 
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     const pricePerPerson = tour?.pricePerPerson || 299; // Default if tour not found
     const totalPrice = pricePerPerson * (booking.party_size || 2);
 
-    // Send follow-up email with availability
+    // Send follow-up email with availability — TO THE CLIENT ONLY (never to operator/hub/agent)
     // CRITICAL: This email must be sent even if availability check fails
     let emailResult;
     try {
@@ -112,8 +112,17 @@ export async function POST(request: NextRequest) {
       if (!booking.customer_email) {
         throw new Error('Customer email is missing from booking');
       }
-      
-      emailResult = await sendAvailabilityFollowUp({
+      // Safeguard: never send the client follow-up to an operator, hub, or test agent
+      if (isOperatorOrInternalEmail(booking.customer_email)) {
+        console.error(
+          'CRITICAL: Follow-up email blocked — booking.customer_email is an operator/hub/agent address. ' +
+          'The "Available Tour Times" email must go only to the client who booked. ' +
+          'customer_email was:',
+          booking.customer_email
+        );
+        emailResult = { success: false, error: 'Follow-up not sent: customer_email is operator/hub/agent — use the real client email' };
+      } else {
+        emailResult = await sendAvailabilityFollowUp({
         customerEmail: booking.customer_email,
         customerName: booking.customer_name || 'Valued Customer',
         refCode: booking.ref_code || '',
@@ -126,9 +135,27 @@ export async function POST(request: NextRequest) {
         phoneNumber: VAPI_PHONE_NUMBER,
         isRainbow: operatorKey === 'rainbow',
       });
+      }
 
       if (emailResult.success) {
         console.log('✅ Availability follow-up email sent successfully to:', booking.customer_email);
+        // When Rainbow: also notify the internal agent to arrange with Rainbow
+        if (operatorKey === 'rainbow' && emails.testAgent) {
+          try {
+            await sendRainbowArrangeNotificationToAgent({
+              agentEmail: emails.testAgent,
+              refCode: booking.ref_code || '',
+              customerName: booking.customer_name || 'Customer',
+              customerEmail: booking.customer_email || '',
+              tourName: tourName,
+              date: booking.preferred_date || '',
+              partySize: booking.party_size || 2,
+            });
+            console.log('✅ Rainbow arrange notification sent to agent:', emails.testAgent);
+          } catch (agentErr) {
+            console.error('Rainbow arrange notification to agent failed:', agentErr);
+          }
+        }
       } else {
         console.error('❌ Availability follow-up email failed:', emailResult.error);
         // Log this as a critical error since follow-up email is essential

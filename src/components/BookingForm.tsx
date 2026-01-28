@@ -169,6 +169,12 @@ export default function BookingForm() {
       const result = await response.json();
 
       if (result.success) {
+        const operatorDisplayName =
+          formData.operator_preference === 'blueHawaiian'
+            ? 'Blue Hawaiian Helicopters'
+            : formData.operator_preference === 'rainbow'
+            ? 'Rainbow Helicopters'
+            : '';
         // Store booking data in sessionStorage for success page
         sessionStorage.setItem('booking_success_data', JSON.stringify({
           ref_code: result.ref_code,
@@ -181,6 +187,9 @@ export default function BookingForm() {
           total_weight: formData.total_weight,
           doors_off: formData.doors_off,
           hotel: formData.hotel,
+          operator: operatorDisplayName,
+          tour_name: selectedTour?.name || formData.tour_name || '',
+          total_price: totalPrice,
         }));
         
         // Redirect to success page
@@ -280,7 +289,7 @@ export default function BookingForm() {
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email *
+              Email * <span className="text-gray-500 font-normal">(your contact for this booking)</span>
             </label>
             <input
               type="email"

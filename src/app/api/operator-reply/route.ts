@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, updateBooking, getBookingByRefCode } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate } from '@/lib/database.types';
-import { bookingStatuses, operators } from '@/lib/constants'; // Import operators for operator selection
+import { bookingStatuses, operators, emails, VAPI_PHONE_NUMBER } from '@/lib/constants'; // Import operators for operator selection
 import { parseOperatorReply } from '@/lib/openai';
-import { sendEmail, sendConfirmationToCustomer } from '@/lib/email';
+import { sendEmail, sendConfirmationToCustomer, replyToInbound } from '@/lib/email';
 
 /**
  * Schema for operator reply from n8n webhook
@@ -112,14 +112,54 @@ export async function POST(request: NextRequest) {
     }
 
     // Update booking based on operator response
-    const prevMeta = booking?.metadata ?? {};
+    const prevMeta = (booking?.metadata ?? {}) as Record<string, unknown>;
     let newStatus = booking.status ?? null;
     const updateData: BookingsUpdate = {
       updated_at: new Date().toISOString(),
       operator_name: operatorName ?? null,
     };
 
-    if (parsed.isConfirmation) {
+    const isRainbow = booking?.operator_name?.toLowerCase().includes('rainbow');
+    const proposedTime = parsed.notes || (parsed.availableDates && parsed.availableDates.length > 0 ? parsed.availableDates[0] : null);
+
+    // Rainbow: operator replied with a proposed time → ask customer to confirm
+    if (isRainbow && proposedTime && !parsed.isConfirmation && !parsed.isRejection && !parsed.willHandleDirectly) {
+      newStatus = bookingStatuses.AWAITING_PAYMENT;
+      updateData.status = newStatus;
+      updateData.metadata = {
+        ...prevMeta,
+        operator_proposed_time: proposedTime,
+        operator_availability_replied_at: new Date().toISOString(),
+      };
+
+      if (booking.customer_email && booking.customer_name) {
+        const phone = VAPI_PHONE_NUMBER;
+        const phoneLink = `tel:+1${phone.replace(/\D/g, '')}`;
+        await sendEmail({
+          to: booking.customer_email,
+          subject: `Confirm your time – ${booking.ref_code || 'Your Tour'}`,
+          text: `Dear ${booking.customer_name},\n\nRainbow Helicopters has ${proposedTime} available for your tour.\n\nPlease reply to this email with:\n1. Which time you'd like to confirm\n2. Your payment information (if you haven't already provided it) so we can forward everything to Rainbow and finalize your booking.\n\nOr call us at ${phone} to confirm and pay over the phone.\n\nBest regards,\nHelicopter Tours on Oahu\nReference: ${booking.ref_code || 'N/A'}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #1a73e8;">Confirm your tour time</h2>
+              <p>Dear ${booking.customer_name},</p>
+              <p><strong>Rainbow Helicopters</strong> has <strong>${proposedTime}</strong> available for your tour.</p>
+              <p>Please reply to this email with:</p>
+              <ol>
+                <li>Which time you'd like to confirm</li>
+                <li>Your payment information (if you haven't already provided it) so we can forward everything to Rainbow and finalize your booking.</li>
+              </ol>
+              <p>Or call us at <a href="${phoneLink}">${phone}</a> to confirm and pay over the phone.</p>
+              <p>Best regards,<br>Helicopter Tours on Oahu</p>
+              <p style="color: #94a3b8; font-size: 12px;">Reference: ${booking.ref_code || 'N/A'}</p>
+            </div>
+          `,
+          from: emails.bookingsHub,
+          replyTo: replyToInbound(),
+        });
+        console.log('Customer asked to confirm Rainbow time:', booking.customer_email);
+      }
+    } else if (parsed.isConfirmation) {
       newStatus = bookingStatuses.CONFIRMED;
       updateData.status = newStatus;
       updateData.confirmation_number = parsed.confirmationNumber || null;

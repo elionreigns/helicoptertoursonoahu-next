@@ -282,6 +282,11 @@ Set these in Vercel Dashboard → Project Settings → Environment Variables:
    - Follow DNS configuration instructions
    - Wait for SSL certificate to be issued (automatic)
 
+4. **If using Vercel Deployment Protection (password/Vercel Auth):**
+   - The booking flow triggers a server-side call to `/api/check-availability-and-followup` to send the follow-up email (e.g. "We're in contact with Rainbow Helicopters…" and phone number).
+   - That call will return 401 unless you enable **Protection Bypass for Automation**.
+   - In Vercel: Project Settings → Deployment Protection → enable **Protection Bypass for Automation** and create a secret. Vercel will set `VERCEL_AUTOMATION_BYPASS_SECRET` automatically; the app uses it so the follow-up API can be called.
+
 5. **Deploy:**
    - Push to GitHub (Vercel auto-deploys)
    - Or click "Redeploy" in Vercel dashboard
