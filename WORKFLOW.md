@@ -330,11 +330,25 @@ export const emails = {
 - **Operator:** Should receive inquiry email (to test email address)
 - **You:** Check `bookings@helicoptertoursonoahu.com` inbox for copy
 
-### 3. Test Operator Reply (Manual Testing)
+### 3. Test Operator Reply
 
-**Option A: Use API directly (for testing)**
+**Option A: Use Test Page (Easiest)**
 
-You can manually test operator replies by calling the API endpoint:
+1. Go to `booking.helicoptertoursonoahu.com/admin/test-operator-reply`
+2. Paste the operator's email reply content
+3. Enter the reference code (or it will be extracted from email)
+4. Click "Test Operator Reply"
+5. Check result - customer should receive appropriate email
+
+**Option B: Reply to Email (Requires n8n Setup)**
+
+For production, set up n8n workflow:
+1. Create n8n workflow with IMAP Email trigger
+2. Monitor `bookings@helicoptertoursonoahu.com` inbox
+3. Filter emails from operator addresses (Blue Hawaiian, Rainbow)
+4. Forward to `/api/operator-reply` endpoint with email content
+
+**Option C: Use API directly (for testing)**
 
 ```bash
 curl -X POST https://booking.helicoptertoursonoahu.com/api/operator-reply \
@@ -346,8 +360,6 @@ curl -X POST https://booking.helicoptertoursonoahu.com/api/operator-reply \
     "refCode": "HTO-BYXUNT"
   }'
 ```
-
-**Option B: Set up n8n workflow (for production)**
 
 1. Create n8n workflow with IMAP Email trigger
 2. Monitor `bookings@helicoptertoursonoahu.com` inbox
