@@ -371,3 +371,181 @@ Helicopter Tours on Oahu
     replyTo: emails.testAgent,
   });
 }
+
+/**
+ * Send follow-up email to customer with available time slots and payment request
+ * This is sent after availability check completes
+ */
+export async function sendAvailabilityFollowUp({
+  customerEmail,
+  customerName,
+  refCode,
+  tourName,
+  operatorName,
+  date,
+  partySize,
+  availableSlots,
+  totalPrice,
+  phoneNumber,
+}: {
+  customerEmail: string;
+  customerName: string;
+  refCode: string;
+  tourName: string;
+  operatorName: string;
+  date: string;
+  partySize: number;
+  availableSlots: Array<{ time: string; price?: number; available: boolean }>;
+  totalPrice: number;
+  phoneNumber?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const subject = `Available Tour Times for ${refCode} - Choose Your Time`;
+
+  // Format date nicely
+  const dateObj = new Date(date);
+  const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // Build available slots list
+  let slotsText = '';
+  let slotsHtml = '';
+  if (availableSlots && availableSlots.length > 0) {
+    slotsText = availableSlots.map((slot, idx) => {
+      const slotPrice = slot.price || (totalPrice / partySize);
+      const slotTotal = slotPrice * partySize;
+      return `${idx + 1}. ${slot.time} - $${slotPrice.toFixed(0)} per person (Total: $${slotTotal.toFixed(0)} for ${partySize} ${partySize === 1 ? 'guest' : 'guests'})`;
+    }).join('\n');
+
+    slotsHtml = `
+      <div style="background-color: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #0c4a6e; margin-top: 0;">Available Times for ${formattedDate}</h3>
+        <ul style="list-style: none; padding: 0;">
+          ${availableSlots.map((slot, idx) => {
+            const slotPrice = slot.price || (totalPrice / partySize);
+            const slotTotal = slotPrice * partySize;
+            return `
+              <li style="padding: 12px; margin-bottom: 8px; background: white; border-radius: 6px; border-left: 4px solid #0ea5e9;">
+                <strong style="color: #0c4a6e;">${slot.time}</strong><br>
+                <span style="color: #64748b;">$${slotPrice.toFixed(0)} per person</span> • 
+                <span style="color: #0c4a6e; font-weight: bold;">Total: $${slotTotal.toFixed(0)} for ${partySize} ${partySize === 1 ? 'guest' : 'guests'}</span>
+              </li>
+            `;
+          }).join('')}
+        </ul>
+      </div>
+    `;
+  } else {
+    slotsText = 'We are checking availability and will contact you shortly with available times.';
+    slotsHtml = `
+      <div style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <p style="color: #92400e; margin: 0;">We are checking availability for your preferred date and will contact you shortly with available time slots.</p>
+      </div>
+    `;
+  }
+
+  const text = `
+Dear ${customerName},
+
+Great news! We've checked availability for your ${tourName} tour with ${operatorName} on ${formattedDate}.
+
+${slotsText}
+
+**What's Next:**
+1. Reply to this email with your preferred time slot
+2. Or call us at ${phoneNumber || '(707) 381-2583'} to book over the phone
+3. We'll confirm your booking and send payment instructions
+
+**About Your Tour:**
+${tourName} with ${operatorName} is an unforgettable experience. You'll soar above Oahu's most stunning landscapes, including pristine beaches, lush valleys, and iconic landmarks. Our experienced pilots provide informative commentary throughout your flight, ensuring you don't miss any of the breathtaking views.
+
+**What's Included:**
+- Professional pilot and safety briefing
+- Scenic flight over Oahu's highlights
+- Informative commentary
+- All safety equipment
+
+**Payment:**
+Total price: $${totalPrice.toFixed(0)} for ${partySize} ${partySize === 1 ? 'guest' : 'guests'}
+
+Once you confirm your preferred time, we'll send you a secure payment link or you can call us to complete your booking over the phone.
+
+**Questions?**
+Reply to this email or call us at ${phoneNumber || '(707) 381-2583'}. We're here to help!
+
+Best regards,
+Helicopter Tours on Oahu
+
+Reference Code: ${refCode}
+  `.trim();
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1a73e8;">Available Tour Times - ${refCode}</h2>
+      
+      <p>Dear ${customerName},</p>
+      
+      <p>Great news! We've checked availability for your <strong>${tourName}</strong> tour with <strong>${operatorName}</strong> on <strong>${formattedDate}</strong>.</p>
+      
+      ${slotsHtml}
+      
+      <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; margin: 20px 0;">
+        <h3 style="color: #1e40af; margin-top: 0;">What's Next:</h3>
+        <ol style="color: #475569; line-height: 1.8;">
+          <li>Reply to this email with your preferred time slot</li>
+          <li>Or call us at <strong><a href="tel:${phoneNumber?.replace(/\s/g, '') || '+17073812583'}" style="color: #2563eb;">${phoneNumber || '(707) 381-2583'}</a></strong> to book over the phone</li>
+          <li>We'll confirm your booking and send payment instructions</li>
+        </ol>
+      </div>
+      
+      <div style="background-color: #fef3c7; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #92400e; margin-top: 0;">About Your Tour</h3>
+        <p style="color: #78350f; line-height: 1.7;">
+          <strong>${tourName}</strong> with <strong>${operatorName}</strong> is an unforgettable experience. You'll soar above Oahu's most stunning landscapes, including pristine beaches, lush valleys, and iconic landmarks. Our experienced pilots provide informative commentary throughout your flight, ensuring you don't miss any of the breathtaking views.
+        </p>
+        
+        <h4 style="color: #92400e; margin-top: 16px;">What's Included:</h4>
+        <ul style="color: #78350f; line-height: 1.8;">
+          <li>Professional pilot and safety briefing</li>
+          <li>Scenic flight over Oahu's highlights</li>
+          <li>Informative commentary</li>
+          <li>All safety equipment</li>
+        </ul>
+      </div>
+      
+      <div style="background-color: #ecfdf5; border: 2px solid #10b981; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <h3 style="color: #065f46; margin-top: 0;">Payment Information</h3>
+        <p style="color: #047857; font-size: 18px; margin: 8px 0;">
+          <strong>Total Price: $${totalPrice.toFixed(0)}</strong> for ${partySize} ${partySize === 1 ? 'guest' : 'guests'}
+        </p>
+        <p style="color: #047857; margin: 8px 0;">
+          Once you confirm your preferred time, we'll send you a secure payment link or you can call us to complete your booking over the phone.
+        </p>
+      </div>
+      
+      <div style="background-color: #f1f5f9; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+        <p style="color: #475569; margin: 0 0 12px 0;"><strong>Questions?</strong></p>
+        <p style="color: #64748b; margin: 0;">
+          Reply to this email or call us at <strong><a href="tel:${phoneNumber?.replace(/\s/g, '') || '+17073812583'}" style="color: #2563eb; text-decoration: none;">${phoneNumber || '(707) 381-2583'}</a></strong>
+        </p>
+        <p style="color: #64748b; margin: 8px 0 0 0; font-size: 12px;">We're here to help!</p>
+      </div>
+      
+      <p style="color: #64748b; font-size: 14px; margin-top: 30px;">
+        Best regards,<br>
+        <strong>Helicopter Tours on Oahu</strong>
+      </p>
+      
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+        Reference Code: <strong>${refCode}</strong>
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: customerEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: emails.testAgent,
+  });
+}

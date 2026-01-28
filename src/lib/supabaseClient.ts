@@ -53,6 +53,19 @@ export async function updateBooking(id: string, data: BookingsUpdate) {
 }
 
 /**
+ * Get booking by reference code
+ */
+export async function getBookingByRefCode(refCode: string): Promise<{ data: BookingsRow | null; error: PostgrestError | null }> {
+  const result = await supabase
+    .from('bookings')
+    .select('*')
+    .eq('ref_code', refCode)
+    .single();
+  
+  return result as { data: BookingsRow | null; error: PostgrestError | null };
+}
+
+/**
  * Type-safe database operations
  */
 export type Booking = Database['public']['Tables']['bookings']['Row'];

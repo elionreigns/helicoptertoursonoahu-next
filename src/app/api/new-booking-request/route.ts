@@ -57,6 +57,7 @@ const bookingRequestSchema = z.object({
   // Optional operator preference
   operator_preference: z.enum(['blueHawaiian', 'rainbow']).optional(),
   tour_name: z.string().optional(),
+  tour_id: z.string().optional(), // Tour ID for pricing lookup
 });
 
 /**
@@ -176,6 +177,7 @@ export async function POST(request: NextRequest) {
         ...(paymentMetadata && { payment: paymentMetadata }),
         ...(availabilityResult && { availability_check: availabilityResult }),
         tour_name: validated.tour_name ?? null,
+        tour_id: validated.tour_id ?? validated.tour_name ?? null, // Store tour ID for pricing lookup
       },
     };
     const { data: booking, error: dbError } = await insertBooking(insertPayload);
@@ -285,6 +287,21 @@ export async function POST(request: NextRequest) {
     } else {
       console.warn('N8N_NEW_BOOKING_WEBHOOK_URL not configured, skipping webhook call');
     }
+
+    // Trigger availability check and follow-up email in background (don't wait)
+    // This runs asynchronously so the booking response is fast
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'https://booking.helicoptertoursonoahu.com';
+    
+    fetch(`${appUrl}/api/check-availability-and-followup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refCode }),
+    }).catch(err => {
+      console.error('Failed to trigger availability check:', err);
+      // Don't fail the booking if background job fails
+    });
 
     return NextResponse.json({
       success: true,

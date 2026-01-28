@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { tours, getToursByOperator, calculateTotalPrice, type Tour } from '@/lib/tours';
 
 interface BookingFormData {
   name: string;
   email: string;
   phone: string;
+  operator_preference: 'blueHawaiian' | 'rainbow' | '';
+  tour_name: string;
   party_size: number;
   preferred_date: string;
   time_window: string;
@@ -29,6 +32,8 @@ export default function BookingForm() {
     name: '',
     email: '',
     phone: '',
+    operator_preference: '',
+    tour_name: '',
     party_size: 2,
     preferred_date: '',
     time_window: '',
@@ -43,6 +48,24 @@ export default function BookingForm() {
     billing_address: '',
     billing_zip: '',
   });
+
+  // Get available tours based on selected operator
+  const availableTours = useMemo(() => {
+    if (!formData.operator_preference) return [];
+    return getToursByOperator(formData.operator_preference);
+  }, [formData.operator_preference]);
+
+  // Get selected tour for price calculation
+  const selectedTour = useMemo(() => {
+    if (!formData.tour_name) return null;
+    return tours.find(t => t.id === formData.tour_name);
+  }, [formData.tour_name]);
+
+  // Calculate total price
+  const totalPrice = useMemo(() => {
+    if (!selectedTour) return 0;
+    return calculateTotalPrice(selectedTour.id, formData.party_size);
+  }, [selectedTour, formData.party_size]);
 
   const [showPayment, setShowPayment] = useState(false);
 
@@ -86,6 +109,14 @@ export default function BookingForm() {
       newErrors.total_weight = 'Total weight must be at least 100 lbs';
     }
 
+    if (!formData.operator_preference) {
+      newErrors.operator_preference = 'Please select an operator';
+    }
+
+    if (!formData.tour_name) {
+      newErrors.tour_name = 'Please select a tour';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -110,6 +141,9 @@ export default function BookingForm() {
           name: formData.name,
           email: formData.email,
           phone: formData.phone,
+          operator_preference: formData.operator_preference as 'blueHawaiian' | 'rainbow',
+          tour_name: selectedTour?.name || formData.tour_name,
+          tour_id: selectedTour?.id || formData.tour_name, // Send tour ID for pricing lookup
           party_size: formData.party_size,
           preferred_date: formData.preferred_date,
           time_window: formData.time_window,
@@ -313,6 +347,89 @@ export default function BookingForm() {
             )}
           </div>
         </div>
+
+        {/* Operator and Tour Selection */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="operator_preference" className="block text-sm font-medium text-gray-700 mb-1">
+              Operator *
+            </label>
+            <select
+              id="operator_preference"
+              name="operator_preference"
+              required
+              aria-required="true"
+              aria-invalid={errors.operator_preference ? 'true' : 'false'}
+              aria-describedby={errors.operator_preference ? 'operator_preference-error' : undefined}
+              value={formData.operator_preference}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, operator_preference: e.target.value as 'blueHawaiian' | 'rainbow' | '', tour_name: '' }));
+              }}
+              className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.operator_preference ? 'border-red-300' : 'border-gray-300'
+              }`}
+            >
+              <option value="">Select Operator</option>
+              <option value="blueHawaiian">Blue Hawaiian Helicopters</option>
+              <option value="rainbow">Rainbow Helicopters</option>
+            </select>
+            {errors.operator_preference && (
+              <p id="operator_preference-error" className="mt-1 text-sm text-red-600" role="alert">
+                {errors.operator_preference}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label htmlFor="tour_name" className="block text-sm font-medium text-gray-700 mb-1">
+              Tour *
+            </label>
+            <select
+              id="tour_name"
+              name="tour_name"
+              required
+              aria-required="true"
+              disabled={!formData.operator_preference}
+              aria-invalid={errors.tour_name ? 'true' : 'false'}
+              aria-describedby={errors.tour_name ? 'tour_name-error' : undefined}
+              value={formData.tour_name}
+              onChange={handleChange}
+              className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.tour_name ? 'border-red-300' : 'border-gray-300'
+              } ${!formData.operator_preference ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+            >
+              <option value="">{formData.operator_preference ? 'Select Tour' : 'Select Operator First'}</option>
+              {availableTours.map((tour) => (
+                <option key={tour.id} value={tour.id}>
+                  {tour.name} - ${tour.pricePerPerson}/person
+                </option>
+              ))}
+            </select>
+            {errors.tour_name && (
+              <p id="tour_name-error" className="mt-1 text-sm text-red-600" role="alert">
+                {errors.tour_name}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Price Display */}
+        {selectedTour && totalPrice > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-gray-600">Tour: <span className="font-medium text-gray-900">{selectedTour.name}</span></p>
+                <p className="text-sm text-gray-600">
+                  {formData.party_size} {formData.party_size === 1 ? 'person' : 'people'} × ${selectedTour.pricePerPerson}/person
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-blue-600">${totalPrice.toLocaleString()}</p>
+                <p className="text-xs text-gray-500">Total Price</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
