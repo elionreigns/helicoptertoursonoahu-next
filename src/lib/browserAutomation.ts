@@ -98,7 +98,8 @@ export async function checkAvailabilityBrowserbase({
     }
 
     // Create a browser session using Browserbase API
-    const sessionResponse = await fetch('https://www.browserbase.com/v1/sessions', {
+    // Note: Using api.browserbase.com (not www.browserbase.com) for API calls
+    const sessionResponse = await fetch('https://api.browserbase.com/v1/sessions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -304,32 +305,51 @@ export async function checkAvailabilityBrowserbase({
       }
     `;
 
-      // Execute the script using Browserbase API
-      // Note: Browserbase API may require SDK - this is a template implementation
-      // You may need to adjust based on Browserbase's current API documentation
+      // IMPORTANT: Browserbase doesn't have an /execute endpoint
+      // Instead, you need to:
+      // 1. Get the connection URL from the session
+      // 2. Connect using Playwright/Puppeteer via that URL
+      // 3. Run automation scripts using Playwright APIs
+      //
+      // For serverless functions, this requires:
+      // - Installing @browserbasehq/sdk or playwright
+      // - Using the SDK's connect() method to get a browser instance
+      // - Running Playwright code against that browser
+      //
+      // Current limitation: This implementation needs to be updated to use Browserbase SDK
+      // See: https://docs.browserbase.com/fundamentals/using-browser-session
       
       try {
-        // Browserbase execution endpoint (adjust based on their API)
-        const executeResponse = await fetch(`https://www.browserbase.com/v1/sessions/${sessionId}/execute`, {
-          method: 'POST',
+        // Get session details to retrieve connection URL
+        const sessionDetailsResponse = await fetch(`https://api.browserbase.com/v1/sessions/${sessionId}`, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'x-bb-api-key': browserbaseApiKey,
           },
-          body: JSON.stringify({
-            script,
-          }),
         });
 
-        if (!executeResponse.ok) {
-          const errorText = await executeResponse.text();
-          throw new Error(`Failed to execute script: ${errorText}`);
+        if (!sessionDetailsResponse.ok) {
+          const errorText = await sessionDetailsResponse.text();
+          const status = sessionDetailsResponse.status;
+          console.error(`Browserbase get session error (${status}):`, errorText);
+          throw new Error(`Failed to get session details (${status}): ${errorText}`);
         }
 
-        const result = await executeResponse.json();
+        const sessionDetails = await sessionDetailsResponse.json();
+        console.log('Session details:', { id: sessionDetails.id, ready: sessionDetails.ready });
+
+        // TODO: Use Browserbase SDK to connect and run Playwright automation
+        // For now, return manual check required until SDK is integrated
+        // Example implementation needed:
+        // const { Browserbase } = require('@browserbasehq/sdk');
+        // const bb = new Browserbase({ apiKey: browserbaseApiKey });
+        // const browser = await bb.connect(sessionId);
+        // const page = await browser.newPage();
+        // await page.goto(fareHarborUrl);
+        // ... automation code ...
 
         // Close session
-        await fetch(`https://www.browserbase.com/v1/sessions/${sessionId}`, {
+        await fetch(`https://api.browserbase.com/v1/sessions/${sessionId}`, {
           method: 'DELETE',
           headers: {
             'x-bb-api-key': browserbaseApiKey,
@@ -337,16 +357,22 @@ export async function checkAvailabilityBrowserbase({
         }).catch(err => console.error('Error closing session:', err));
 
         return {
-          available: result.available || false,
-          availableSlots: result.availableSlots || [],
-          details: result.details,
+          available: false,
+          error: 'Browserbase automation requires SDK integration. Manual check required.',
           source: 'browserbase',
+          details: {
+            date,
+            partySize,
+            operator,
+            note: 'Browserbase SDK integration needed. See WORKFLOW.md for implementation details.',
+            sessionId,
+          },
         };
       } catch (error) {
         console.error('Browserbase execution error:', error);
         
         // Close session on error
-        await fetch(`https://www.browserbase.com/v1/sessions/${sessionId}`, {
+        await fetch(`https://api.browserbase.com/v1/sessions/${sessionId}`, {
           method: 'DELETE',
           headers: {
             'x-bb-api-key': browserbaseApiKey,

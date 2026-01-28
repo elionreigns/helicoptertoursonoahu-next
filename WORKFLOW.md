@@ -287,10 +287,18 @@ export const emails = {
 - [ ] Final confirmation email automation
 
 ### 🔧 Known Issues to Fix
-1. **Browserbase Script Error:** "Failed to execute script" 
-   - The script uses Playwright syntax which may not work in Browserbase's execute endpoint
-   - May need to rewrite script to use Browserbase's browser API directly
-   - **Workaround:** For now, availability check will return "manual check required" and operator will handle it
+1. **Browserbase Integration:** "Failed to execute script" / 401 Unauthorized
+   - **Root Cause:** Browserbase doesn't have an `/execute` endpoint. You must:
+     1. Create a session (✅ working)
+     2. Connect using Browserbase SDK or Playwright via connection URL
+     3. Run automation using Playwright APIs
+   - **Current Status:** Session creation works, but automation needs SDK integration
+   - **Solution Required:** 
+     - Install `@browserbasehq/sdk` package
+     - Use SDK's `connect()` method to get browser instance
+     - Run Playwright automation against connected browser
+     - See: https://docs.browserbase.com/fundamentals/using-browser-session
+   - **Workaround:** For now, availability check returns "manual check required" and operator handles it via email
 
 2. **Background Job URL:** The automatic availability check uses `NEXT_PUBLIC_APP_URL`
    - **Action Required:** Set `NEXT_PUBLIC_APP_URL=https://booking.helicoptertoursonoahu.com` in Vercel env vars
