@@ -3,9 +3,20 @@ import Link from 'next/link';
 export default function Home() {
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white py-16 md:py-24 px-4">
-        <div className="container mx-auto max-w-4xl text-center">
+      {/* Hero Section: video background (gradient fallback until video loads) */}
+      <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800">
+        <video
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden
+        >
+          <source src="https://www.helicoptertoursonoahu.com/video/helicopterpromo.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 via-blue-800/40 to-indigo-900/50 z-[1]" aria-hidden />
+        <div className="container mx-auto max-w-4xl text-center relative z-10 text-white">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight drop-shadow-sm">
             Book Your Oahu Helicopter Tour Now
           </h1>
