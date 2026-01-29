@@ -16,19 +16,11 @@ export default function Header() {
             className="flex items-center space-x-3 hover:opacity-80 transition-opacity"
           >
             <div className="flex items-center space-x-2">
-              <svg
-                className="w-8 h-8 md:w-10 md:h-10 text-blue-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
+              <img
+                src="https://www.helicoptertoursonoahu.com/video/helicopter-tours-motion.gif"
+                alt=""
+                className="h-8 w-auto max-w-[90px] object-contain md:h-10 md:max-w-[110px]"
+              />
               <span className="text-lg md:text-xl font-bold text-gray-900">
                 Helicopter Tours
               </span>
