@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { checkAvailability } from '@/lib/browserAutomation';
-import { sendAvailabilityFollowUp, sendRainbowArrangeNotificationToAgent } from '@/lib/email';
+import { sendRainbowFirstFollowUp, sendBlueHawaiianFirstFollowUp, sendRainbowArrangeNotificationToAgent } from '@/lib/email';
 import { getBookingByRefCode, updateBooking } from '@/lib/supabaseClient';
 import { bookingStatuses, emails, isOperatorOrInternalEmail } from '@/lib/constants';
 import { VAPI_PHONE_NUMBER } from '@/lib/constants';
@@ -121,20 +121,28 @@ export async function POST(request: NextRequest) {
           booking.customer_email
         );
         emailResult = { success: false, error: 'Follow-up not sent: customer_email is operator/hub/agent — use the real client email' };
+      } else if (operatorKey === 'rainbow') {
+        emailResult = await sendRainbowFirstFollowUp({
+          customerEmail: booking.customer_email,
+          customerName: booking.customer_name || 'Valued Customer',
+          refCode: booking.ref_code || '',
+          tourName: tourName,
+          date: booking.preferred_date || '',
+          phoneNumber: VAPI_PHONE_NUMBER,
+        });
       } else {
-        emailResult = await sendAvailabilityFollowUp({
-        customerEmail: booking.customer_email,
-        customerName: booking.customer_name || 'Valued Customer',
-        refCode: booking.ref_code || '',
-        tourName: tourName,
-        operatorName: booking.operator_name || 'Helicopter Tours',
-        date: booking.preferred_date || '',
-        partySize: booking.party_size || 2,
-        availableSlots: availabilityResult.availableSlots || [],
-        totalPrice: totalPrice,
-        phoneNumber: VAPI_PHONE_NUMBER,
-        isRainbow: operatorKey === 'rainbow',
-      });
+        emailResult = await sendBlueHawaiianFirstFollowUp({
+          customerEmail: booking.customer_email,
+          customerName: booking.customer_name || 'Valued Customer',
+          refCode: booking.ref_code || '',
+          tourName: tourName,
+          date: booking.preferred_date || '',
+          partySize: booking.party_size || 2,
+          totalPrice: totalPrice,
+          availableSlots: availabilityResult.availableSlots || [],
+          phoneNumber: VAPI_PHONE_NUMBER,
+        });
+      }
       }
 
       if (emailResult.success) {

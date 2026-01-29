@@ -1,18 +1,19 @@
+import { createHmac, timingSafeEqual } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { emails } from '@/lib/constants';
 
 /**
  * Resend Inbound Webhook
  *
- * Resend POSTs here when an email is received at your receiving domain
- * (e.g. bookings@helicoptertoursonoahu.com if you set up Resend Inbound).
+ * Resend POSTs here when an email is received at your receiving address
+ * (e.g. helicopter@goudamo.resend.app — set REPLY_TO_INBOUND in Vercel).
  *
  * We fetch the email body via Resend API, then route to:
  * - /api/operator-reply if from = Blue Hawaiian or Rainbow
  * - /api/customer-reply otherwise (customer replies)
  *
- * Required: Set up Resend Inbound (receiving) and add this URL as a webhook
- * with event type "email.received". See RESEND_INBOUND_SETUP.md.
+ * Required: Resend Receiving on + webhook URL with event "email.received".
+ * See RESEND_INBOUND_CHECKLIST.md.
  */
 
 const OPERATOR_EMAILS = [emails.blueHawaiian, emails.rainbow].map((e) => e.toLowerCase());
@@ -23,9 +24,51 @@ function extractFromEmail(from: string): string {
   return from.trim().toLowerCase();
 }
 
-export async function POST(request: NextRequest) {
+/** Optional Svix signature verification when RESEND_WEBHOOK_SECRET is set. */
+function verifyWebhookSignature(
+  rawBody: string,
+  svixId: string | null,
+  svixTimestamp: string | null,
+  svixSignature: string | null,
+  secret: string
+): boolean {
+  if (!svixId || !svixTimestamp || !svixSignature) return false;
+  const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`;
+  const key = secret.startsWith('whsec_') ? Buffer.from(secret.slice(6), 'base64') : secret;
+  const expected = createHmac('sha256', key).update(signedContent).digest('base64');
+  const v1Part = svixSignature.split(' ').find((s) => s.startsWith('v1,'));
+  if (!v1Part) return false;
+  const sig = v1Part.slice(3);
+  if (expected.length !== sig.length) return false;
   try {
-    const event = (await request.json()) as {
+    return timingSafeEqual(Buffer.from(expected, 'base64'), Buffer.from(sig, 'base64'));
+  } catch {
+    return false;
+  }
+}
+
+export async function POST(request: NextRequest) {
+  let rawBody: string;
+  try {
+    rawBody = await request.text();
+  } catch (e) {
+    console.error('Resend Inbound: failed to read body', e);
+    return NextResponse.json({ error: 'Bad request' }, { status: 400 });
+  }
+
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET?.trim();
+  if (webhookSecret) {
+    const id = request.headers.get('svix-id');
+    const timestamp = request.headers.get('svix-timestamp');
+    const signature = request.headers.get('svix-signature');
+    if (!verifyWebhookSignature(rawBody, id, timestamp, signature, webhookSecret)) {
+      console.warn('Resend Inbound: webhook signature verification failed');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
+  }
+
+  try {
+    const event = JSON.parse(rawBody) as {
       type?: string;
       data?: { email_id?: string; from?: string; subject?: string };
     };
@@ -95,12 +138,15 @@ export async function POST(request: NextRequest) {
     if (!apiRes.ok) {
       const errText = await apiRes.text();
       console.error('Resend Inbound: API call failed', endpoint, apiRes.status, errText);
-      return NextResponse.json({ received: true });
+      return NextResponse.json({ received: true, error: 'downstream_failed', endpoint });
     }
 
+    console.log('Resend Inbound: routed to', endpoint, 'from', fromEmail);
     return NextResponse.json({ received: true, routed: endpoint });
   } catch (error) {
-    console.error('Resend Inbound webhook error:', error);
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    const errStack = error instanceof Error ? error.stack : undefined;
+    console.error('Resend Inbound webhook error:', errMsg, errStack ?? '');
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

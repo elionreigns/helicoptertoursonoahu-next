@@ -4,7 +4,8 @@ import { supabase, updateBooking, getBookingByRefCode } from '@/lib/supabaseClie
 import type { BookingsRow, BookingsUpdate } from '@/lib/database.types';
 import { bookingStatuses, operators, emails, VAPI_PHONE_NUMBER } from '@/lib/constants'; // Import operators for operator selection
 import { parseOperatorReply } from '@/lib/openai';
-import { sendEmail, sendConfirmationToCustomer, replyToInbound } from '@/lib/email';
+import { sendEmail, sendRainbowTimesToCustomer, sendRainbowFinalConfirmation, sendBlueHawaiianFinalConfirmation, replyToInbound } from '@/lib/email';
+import type { RainbowIsland, BlueHawaiianIsland } from '@/lib/email';
 
 /**
  * Schema for operator reply from n8n webhook
@@ -122,67 +123,83 @@ export async function POST(request: NextRequest) {
     const isRainbow = booking?.operator_name?.toLowerCase().includes('rainbow');
     const proposedTime = parsed.notes || (parsed.availableDates && parsed.availableDates.length > 0 ? parsed.availableDates[0] : null);
 
-    // Rainbow: operator replied with a proposed time → ask customer to confirm
-    if (isRainbow && proposedTime && !parsed.isConfirmation && !parsed.isRejection && !parsed.willHandleDirectly) {
+    // Rainbow: operator replied with available times → email customer to pick one (RAINBOW_EMAILS.md #2)
+    if (isRainbow && (proposedTime || (parsed.availableDates && parsed.availableDates.length > 0)) && !parsed.isConfirmation && !parsed.isRejection && !parsed.willHandleDirectly) {
+      const timesList = (parsed.availableDates && parsed.availableDates.length > 0) ? parsed.availableDates : (proposedTime ? [proposedTime] : []);
       newStatus = bookingStatuses.AWAITING_PAYMENT;
       updateData.status = newStatus;
       updateData.metadata = {
         ...prevMeta,
         operator_proposed_time: proposedTime,
+        operator_available_times: timesList,
         operator_availability_replied_at: new Date().toISOString(),
       };
 
       if (booking.customer_email && booking.customer_name) {
-        const phone = VAPI_PHONE_NUMBER;
-        const phoneLink = `tel:+1${phone.replace(/\D/g, '')}`;
-        await sendEmail({
-          to: booking.customer_email,
-          subject: `Confirm your time – ${booking.ref_code || 'Your Tour'}`,
-          text: `Dear ${booking.customer_name},\n\nRainbow Helicopters has ${proposedTime} available for your tour.\n\nPlease reply to this email with:\n1. Which time you'd like to confirm\n2. Your payment information (if you haven't already provided it) so we can forward everything to Rainbow and finalize your booking.\n\nOr call us at ${phone} to confirm and pay over the phone.\n\nBest regards,\nHelicopter Tours on Oahu\nReference: ${booking.ref_code || 'N/A'}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #1a73e8;">Confirm your tour time</h2>
-              <p>Dear ${booking.customer_name},</p>
-              <p><strong>Rainbow Helicopters</strong> has <strong>${proposedTime}</strong> available for your tour.</p>
-              <p>Please reply to this email with:</p>
-              <ol>
-                <li>Which time you'd like to confirm</li>
-                <li>Your payment information (if you haven't already provided it) so we can forward everything to Rainbow and finalize your booking.</li>
-              </ol>
-              <p>Or call us at <a href="${phoneLink}">${phone}</a> to confirm and pay over the phone.</p>
-              <p>Best regards,<br>Helicopter Tours on Oahu</p>
-              <p style="color: #94a3b8; font-size: 12px;">Reference: ${booking.ref_code || 'N/A'}</p>
-            </div>
-          `,
-          from: emails.bookingsHub,
-          replyTo: replyToInbound(),
+        const timesResult = await sendRainbowTimesToCustomer({
+          customerEmail: booking.customer_email,
+          customerName: booking.customer_name,
+          refCode: booking.ref_code || '',
+          date: booking.preferred_date || '',
+          timesList,
+          phoneNumber: VAPI_PHONE_NUMBER,
         });
-        console.log('Customer asked to confirm Rainbow time:', booking.customer_email);
+        if (timesResult.success) {
+          console.log('Rainbow times email sent to customer:', booking.customer_email);
+        } else {
+          console.error('Rainbow times email failed:', timesResult.error);
+        }
       }
     } else if (parsed.isConfirmation) {
       newStatus = bookingStatuses.CONFIRMED;
       updateData.status = newStatus;
       updateData.confirmation_number = parsed.confirmationNumber || null;
       updateData.total_amount = parsed.price ?? null;
+      const confirmedTime = parsed.notes || (parsed.availableDates && parsed.availableDates[0]) || 'Confirmed';
+      const tourName = (booking.metadata as Record<string, unknown>)?.tour_name as string || 'Helicopter Tour';
 
-      // Send confirmation to customer
+      // Send operator-specific final confirmation (where to go, parking, what to bring)
       if (booking.customer_email && booking.customer_name) {
-        const confirmResult = await sendConfirmationToCustomer({
-          customerEmail: booking.customer_email,
-          customerName: booking.customer_name,
-          bookingDetails: {
-            operatorName: validated.operatorName || booking.operator_name || 'Operator',
+        const meta = (booking.metadata || {}) as Record<string, unknown>;
+        const islandRaw = (meta.island as string)?.toLowerCase() || 'oahu';
+
+        if (isRainbow) {
+          const rainbowIsland: RainbowIsland = islandRaw === 'big_island' || islandRaw === 'big island' ? 'big_island' : 'oahu';
+          const confirmResult = await sendRainbowFinalConfirmation({
+            customerEmail: booking.customer_email,
+            customerName: booking.customer_name,
+            refCode: booking.ref_code || '',
+            tourName,
             date: booking.preferred_date || '',
-            time: parsed.notes || undefined,
-            partySize: booking.party_size || 1,
-            totalAmount: parsed.price || undefined,
-          },
-          confirmationNumber: parsed.confirmationNumber,
-        });
-        if (confirmResult.success) {
-          console.log('Confirmation email sent to customer:', booking.customer_email);
+            confirmedTime,
+            island: rainbowIsland,
+            phoneNumber: VAPI_PHONE_NUMBER,
+          });
+          if (confirmResult.success) {
+            console.log('Rainbow final confirmation sent to customer:', booking.customer_email);
+          } else {
+            console.error('Rainbow final confirmation failed:', confirmResult.error);
+          }
         } else {
-          console.error('Confirmation email failed:', confirmResult.error);
+          const bhIsland: BlueHawaiianIsland =
+            islandRaw === 'maui' ? 'maui' :
+            islandRaw === 'kauai' ? 'kauai' :
+            islandRaw === 'big_island' || islandRaw === 'big island' ? 'big_island' : 'oahu';
+          const confirmResult = await sendBlueHawaiianFinalConfirmation({
+            customerEmail: booking.customer_email,
+            customerName: booking.customer_name,
+            refCode: booking.ref_code || '',
+            tourName,
+            date: booking.preferred_date || '',
+            confirmedTime,
+            island: bhIsland,
+            phoneNumber: VAPI_PHONE_NUMBER,
+          });
+          if (confirmResult.success) {
+            console.log('Blue Hawaiian final confirmation sent to customer:', booking.customer_email);
+          } else {
+            console.error('Blue Hawaiian final confirmation failed:', confirmResult.error);
+          }
         }
       }
     } else if (parsed.willHandleDirectly) {

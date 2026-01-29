@@ -551,6 +551,505 @@ From: Helicopter Tours on Oahu
 }
 
 /**
+ * Rainbow first follow-up (RAINBOW_EMAILS.md #1): right after confirmation.
+ * Says we're communicating with Rainbow for times; asks for payment and any missing info.
+ */
+export async function sendRainbowFirstFollowUp({
+  customerEmail,
+  customerName,
+  refCode,
+  tourName,
+  date,
+  phoneNumber,
+}: {
+  customerEmail: string;
+  customerName: string;
+  refCode: string;
+  tourName: string;
+  date: string;
+  phoneNumber?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const phone = phoneNumber || VAPI_PHONE_NUMBER;
+  const subject = `Available Tour Times for ${refCode} – We're Contacting Rainbow & Need Your Details`;
+  const text = `
+Dear ${customerName},
+
+Thank you for booking with Helicopter Tours on Oahu! We've received your request for ${tourName} with Rainbow Helicopters on ${formattedDate}.
+
+We're now in contact with Rainbow Helicopters to get available times closest to your preferred date. We'll email you as soon as we have options.
+
+**We need a few details from you so we can send everything to Rainbow in one go:**
+
+• If you haven't already, please send us your **payment information** (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. For security, you can also call us at ${phone} to provide payment over the phone.
+• If any of the following were missing from your booking, please send them now: full name, party size, total weight (all guests combined), hotel or pickup location, and any special requests or doors-off preference.
+
+If we already have everything from your booking, you're all set — we'll just need you to confirm your preferred time once Rainbow sends us their available slots.
+
+Reply to this email with your payment info and any missing details, or call us at ${phone}.
+
+Best regards,
+Helicopter Tours on Oahu
+
+Reference Code: ${refCode}
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #166534;">We're Contacting Rainbow & Need Your Details</h2>
+      <p>Dear ${customerName},</p>
+      <p>Thank you for booking with Helicopter Tours on Oahu! We've received your request for <strong>${tourName}</strong> with Rainbow Helicopters on <strong>${formattedDate}</strong>.</p>
+      <p>We're now in contact with Rainbow Helicopters to get available times closest to your preferred date. We'll email you as soon as we have options.</p>
+      <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0;">
+        <p style="margin: 0 0 12px 0; font-weight: bold;">We need a few details from you so we can send everything to Rainbow in one go:</p>
+        <ul style="margin: 0; padding-left: 20px;">
+          <li>If you haven't already, please send us your <strong>payment information</strong> (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. For security, you can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to provide payment over the phone.</li>
+          <li>If any of the following were missing from your booking, please send them now: full name, party size, total weight (all guests combined), hotel or pickup location, and any special requests or doors-off preference.</li>
+        </ul>
+        <p style="margin: 12px 0 0 0;">If we already have everything from your booking, you're all set — we'll just need you to confirm your preferred time once Rainbow sends us their available slots.</p>
+      </div>
+      <p>Reply to this email with your payment info and any missing details, or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong>.</p>
+      <p>Best regards,<br>Helicopter Tours on Oahu</p>
+      <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
+    </div>
+  `;
+  return sendEmail({
+    to: customerEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
+ * Rainbow: email customer when Rainbow has sent us available times (RAINBOW_EMAILS.md #2).
+ */
+export async function sendRainbowTimesToCustomer({
+  customerEmail,
+  customerName,
+  refCode,
+  date,
+  timesList,
+  phoneNumber,
+}: {
+  customerEmail: string;
+  customerName: string;
+  refCode: string;
+  date: string;
+  timesList: string[];
+  phoneNumber?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const phone = phoneNumber || VAPI_PHONE_NUMBER;
+  const listText = timesList.length ? timesList.map(t => `• ${t}`).join('\n') : '• (times provided by Rainbow)';
+  const listHtml = timesList.length ? timesList.map(t => `<li>${t}</li>`).join('') : '<li>(times provided by Rainbow)</li>';
+  const subject = `${refCode} – Rainbow Has Times for You – Pick One & Confirm`;
+  const text = `
+Dear ${customerName},
+
+Rainbow Helicopters has provided the following available times for your tour on ${formattedDate}:
+
+${listText}
+
+Please reply to this email with which time works best for you (e.g. "2pm works" or "I'll take 11:30 AM"). If you haven't already sent your payment information, please include it in your reply or call us at ${phone} so we can confirm your booking with Rainbow.
+
+Once you confirm your time, we'll notify Rainbow and get your tour locked in.
+
+Best regards,
+Helicopter Tours on Oahu
+
+Reference Code: ${refCode}
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #166534;">Rainbow Has Times for You – Pick One & Confirm</h2>
+      <p>Dear ${customerName},</p>
+      <p>Rainbow Helicopters has provided the following available times for your tour on <strong>${formattedDate}</strong>:</p>
+      <ul>${listHtml}</ul>
+      <p>Please reply to this email with which time works best for you (e.g. "2pm works" or "I'll take 11:30 AM"). If you haven't already sent your payment information, please include it in your reply or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong> so we can confirm your booking with Rainbow.</p>
+      <p>Once you confirm your time, we'll notify Rainbow and get your tour locked in.</p>
+      <p>Best regards,<br>Helicopter Tours on Oahu</p>
+      <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
+    </div>
+  `;
+  return sendEmail({
+    to: customerEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/** Island for Rainbow: oahu | big_island (Kona). */
+export type RainbowIsland = 'oahu' | 'big_island';
+
+/**
+ * Rainbow final confirmation (RAINBOW_EMAILS.md #3): when Rainbow says "it's a go".
+ * Includes where to go (Oahu or Big Island), when to arrive, what to bring/not bring.
+ */
+export async function sendRainbowFinalConfirmation({
+  customerEmail,
+  customerName,
+  refCode,
+  tourName,
+  date,
+  confirmedTime,
+  island,
+  phoneNumber,
+}: {
+  customerEmail: string;
+  customerName: string;
+  refCode: string;
+  tourName: string;
+  date: string;
+  confirmedTime: string;
+  island: RainbowIsland;
+  phoneNumber?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const phone = phoneNumber || VAPI_PHONE_NUMBER;
+  const subject = `${refCode} – You're Confirmed! Rainbow Helicopter Tour – Where to Go & What to Know`;
+  const addressBlock =
+    island === 'oahu'
+      ? `Oahu – Honolulu\n155 Kapalulu Pl, Ste. 197, Honolulu, HI 96819\n(Honolulu International Airport – Castle & Cooke Aviation building. Parking: left-hand side lot. Check-in at the large glass doors at the main entrance.)`
+      : `Big Island – Kona\n73-4370 Pao'o St, Kailua-Kona, HI 96740\n(Check-in at the address above. Kona location only.)`;
+  const addressBlockHtml =
+    island === 'oahu'
+      ? `<p><strong>Oahu – Honolulu</strong><br>155 Kapalulu Pl, Ste. 197, Honolulu, HI 96819<br><span style="color: #64748b;">(Honolulu International Airport – Castle & Cooke Aviation building. Parking: left-hand side lot. Check-in at the large glass doors at the main entrance.)</span></p>`
+      : `<p><strong>Big Island – Kona</strong><br>73-4370 Pao'o St, Kailua-Kona, HI 96740<br><span style="color: #64748b;">(Check-in at the address above. Kona location only.)</span></p>`;
+  const text = `
+Dear ${customerName},
+
+You're all set! Rainbow Helicopters has confirmed your tour.
+
+**Your tour**
+• Tour: ${tourName}
+• Date: ${formattedDate}
+• Time: ${confirmedTime}
+• Reference: ${refCode}
+
+**Where to go (check-in address)**
+
+${addressBlock}
+
+**When to arrive**
+Please arrive 15–30 minutes before your scheduled flight time. Have your confirmation and ID ready.
+
+**What to bring**
+• Comfortable, loose-fitting clothing and long pants
+• Closed-toe flat shoes (e.g. sneakers)
+• Sunglasses, hat, sunscreen (apply before flight)
+• Camera
+
+**What not to bring**
+• Loose items that could fall (store in car or as directed at check-in)
+
+**Parking**
+Use the lot indicated for your location (Oahu: left-hand side lot at Castle & Cooke Aviation).
+
+If you have any questions, reply to this email or call us at ${phone}.
+
+Have an amazing flight!
+
+Helicopter Tours on Oahu
+
+Reference Code: ${refCode}
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #166534;">You're Confirmed! Rainbow Helicopter Tour</h2>
+      <p>Dear ${customerName},</p>
+      <p>You're all set! Rainbow Helicopters has confirmed your tour.</p>
+      <h3>Your tour</h3>
+      <ul>
+        <li>Tour: ${tourName}</li>
+        <li>Date: ${formattedDate}</li>
+        <li>Time: ${confirmedTime}</li>
+        <li>Reference: ${refCode}</li>
+      </ul>
+      <h3>Where to go (check-in address)</h3>
+      ${addressBlockHtml}
+      <h3>When to arrive</h3>
+      <p>Please arrive 15–30 minutes before your scheduled flight time. Have your confirmation and ID ready.</p>
+      <h3>What to bring</h3>
+      <ul><li>Comfortable, loose-fitting clothing and long pants</li><li>Closed-toe flat shoes (e.g. sneakers)</li><li>Sunglasses, hat, sunscreen (apply before flight)</li><li>Camera</li></ul>
+      <h3>What not to bring</h3>
+      <p>Loose items that could fall (store in car or as directed at check-in).</p>
+      <h3>Parking</h3>
+      <p>Use the lot indicated for your location (Oahu: left-hand side lot at Castle & Cooke Aviation).</p>
+      <p>If you have any questions, reply to this email or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong>.</p>
+      <p>Have an amazing flight!<br>Helicopter Tours on Oahu</p>
+      <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
+    </div>
+  `;
+  return sendEmail({
+    to: customerEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/** Island for Blue Hawaiian: oahu | maui | kauai | big_island. */
+export type BlueHawaiianIsland = 'oahu' | 'maui' | 'kauai' | 'big_island';
+
+/**
+ * Blue Hawaiian first follow-up (BLUE_HAWAIIAN_EMAILS.md #1): after we scrape FareHarbor.
+ * Lists available times (or "checking live availability" fallback) and asks for preferred time + payment/missing info.
+ */
+export async function sendBlueHawaiianFirstFollowUp({
+  customerEmail,
+  customerName,
+  refCode,
+  tourName,
+  date,
+  partySize,
+  totalPrice,
+  availableSlots,
+  phoneNumber,
+}: {
+  customerEmail: string;
+  customerName: string;
+  refCode: string;
+  tourName: string;
+  date: string;
+  partySize: number;
+  totalPrice: number;
+  availableSlots: Array<{ time: string; price?: number; available?: boolean }>;
+  phoneNumber?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const phone = phoneNumber || VAPI_PHONE_NUMBER;
+  const subject = `Available Tour Times for ${refCode} – Choose Your Time`;
+  const hasSlots = availableSlots && availableSlots.length > 0;
+  let slotsText = '';
+  let slotsHtml = '';
+  if (hasSlots) {
+    slotsText = availableSlots
+      .map((slot, idx) => {
+        const pricePer = slot.price ?? totalPrice / partySize;
+        const slotTotal = pricePer * partySize;
+        return `${idx + 1}. ${slot.time} – $${pricePer.toFixed(0)} per person (Total: $${slotTotal.toFixed(0)} for ${partySize} guest(s))`;
+      })
+      .join('\n');
+    slotsHtml = availableSlots
+      .map((slot) => {
+        const pricePer = slot.price ?? totalPrice / partySize;
+        const slotTotal = pricePer * partySize;
+        return `<li><strong>${slot.time}</strong> – $${pricePer.toFixed(0)} per person (Total: $${slotTotal.toFixed(0)} for ${partySize} guest(s))</li>`;
+      })
+      .join('');
+  } else {
+    slotsText = `We're checking live availability for your preferred date (${formattedDate}) and will contact you shortly with available time slots. You can also call us at ${phone} to discuss times.\n\nIn the meantime, if you haven't already sent your payment information or any missing booking details (party size, weight, hotel), please send them now so we're ready to confirm as soon as we have times.`;
+    slotsHtml = `<p>We're checking live availability for your preferred date (<strong>${formattedDate}</strong>) and will contact you shortly with available time slots. You can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to discuss times.</p><p>In the meantime, if you haven't already sent your payment information or any missing booking details (party size, weight, hotel), please send them now so we're ready to confirm as soon as we have times.</p>`;
+  }
+  const text = `
+Dear ${customerName},
+
+Great news! We've checked availability for your ${tourName} tour with Blue Hawaiian Helicopters on ${formattedDate}.
+
+${hasSlots ? `**Available times near your preferred window:**\n\n${slotsText}\n\n` : slotsText + '\n\n'}
+
+**What we need from you:**
+
+1. Reply to this email with your **preferred time** (e.g. "11:30 AM" or "2pm works").
+2. If you haven't already sent your **payment information**, please send it now (card name, number, expiry, CVC, billing address) so we can confirm your booking with Blue Hawaiian. You can also call us at ${phone} to provide payment over the phone.
+3. If we're missing any details (party size, total weight, hotel, special requests), please send those too.
+
+Once you pick a time and we have your payment (or you call us), we'll confirm with Blue Hawaiian and get you locked in.
+
+**Total price:** $${totalPrice.toFixed(0)} for ${partySize} guest(s).
+
+Reply or call us at ${phone} with your chosen time and any missing info.
+
+Best regards,
+Helicopter Tours on Oahu
+
+Reference Code: ${refCode}
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #0c4a6e;">Available Tour Times – Choose Your Time</h2>
+      <p>Dear ${customerName},</p>
+      <p>Great news! We've checked availability for your <strong>${tourName}</strong> tour with Blue Hawaiian Helicopters on <strong>${formattedDate}</strong>.</p>
+      <h3>Available times near your preferred window</h3>
+      ${hasSlots ? `<ol>${slotsHtml}</ol>` : slotsHtml}
+      <h3>What we need from you</h3>
+      <ol>
+        <li>Reply to this email with your <strong>preferred time</strong> (e.g. "11:30 AM" or "2pm works").</li>
+        <li>If you haven't already sent your <strong>payment information</strong>, please send it now so we can confirm your booking with Blue Hawaiian. You can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to provide payment over the phone.</li>
+        <li>If we're missing any details (party size, total weight, hotel, special requests), please send those too.</li>
+      </ol>
+      <p>Once you pick a time and we have your payment (or you call us), we'll confirm with Blue Hawaiian and get you locked in.</p>
+      <p><strong>Total price:</strong> $${totalPrice.toFixed(0)} for ${partySize} guest(s).</p>
+      <p>Reply or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong> with your chosen time and any missing info.</p>
+      <p>Best regards,<br>Helicopter Tours on Oahu</p>
+      <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
+    </div>
+  `;
+  return sendEmail({
+    to: customerEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
+ * Blue Hawaiian final confirmation (BLUE_HAWAIIAN_EMAILS.md #2): when Blue Hawaiian says "it's a go".
+ * Island-specific address block (Oahu, Maui, Kauai, Big Island).
+ */
+export async function sendBlueHawaiianFinalConfirmation({
+  customerEmail,
+  customerName,
+  refCode,
+  tourName,
+  date,
+  confirmedTime,
+  island,
+  phoneNumber,
+}: {
+  customerEmail: string;
+  customerName: string;
+  refCode: string;
+  tourName: string;
+  date: string;
+  confirmedTime: string;
+  island: BlueHawaiianIsland;
+  phoneNumber?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const phone = phoneNumber || VAPI_PHONE_NUMBER;
+  const subject = `${refCode} – You're Confirmed! Blue Hawaiian Helicopter Tour – Where to Go & What to Know`;
+  const addressBlocks: Record<BlueHawaiianIsland, { text: string; html: string }> = {
+    oahu: {
+      text: `Oahu – Honolulu Heliport\n99 Kaulele Pl, Honolulu, HI 96819\nPhone: (808) 831-8800\n\nOr if your tour departs from North Shore:\nTurtle Bay Resort Heliport\n57-091 Kamehameha Hwy, Kahuku, HI 96731`,
+      html: `<p><strong>Oahu – Honolulu Heliport</strong><br>99 Kaulele Pl, Honolulu, HI 96819<br>Phone: (808) 831-8800</p><p>Or if your tour departs from North Shore:<br><strong>Turtle Bay Resort Heliport</strong><br>57-091 Kamehameha Hwy, Kahuku, HI 96731</p>`,
+    },
+    maui: {
+      text: `Maui – Kahului Heliport\n1 Lelepio Pl, Kahului, HI 96732\nPhone: (808) 871-8844`,
+      html: `<p><strong>Maui – Kahului Heliport</strong><br>1 Lelepio Pl, Kahului, HI 96732<br>Phone: (808) 871-8844</p>`,
+    },
+    kauai: {
+      text: `Kauai – Lihue Heliport\n3730 Ahukini Rd, Lihue Heliport #8, Lihue, HI 96766\nPhone: (808) 245-5800\n\nOr Princeville:\n5-3541 Kuhio Hwy, Kilauea, HI 96754`,
+      html: `<p><strong>Kauai – Lihue Heliport</strong><br>3730 Ahukini Rd, Lihue Heliport #8, Lihue, HI 96766<br>Phone: (808) 245-5800</p><p>Or Princeville:<br>5-3541 Kuhio Hwy, Kilauea, HI 96754</p>`,
+    },
+    big_island: {
+      text: `Big Island – Hilo Heliport\n2650 Kekuanaoa St, Hilo, HI 96720\nPhone: (808) 961-5600\n\nOr Waikoloa:\n68-690 Waikoloa Rd, Waikoloa Village, HI 96738\nPhone: (808) 886-1768`,
+      html: `<p><strong>Big Island – Hilo Heliport</strong><br>2650 Kekuanaoa St, Hilo, HI 96720<br>Phone: (808) 961-5600</p><p>Or Waikoloa:<br>68-690 Waikoloa Rd, Waikoloa Village, HI 96738<br>Phone: (808) 886-1768</p>`,
+    },
+  };
+  const block = addressBlocks[island];
+  const text = `
+Dear ${customerName},
+
+You're all set! Blue Hawaiian Helicopters has confirmed your tour.
+
+**Your tour**
+• Tour: ${tourName}
+• Date: ${formattedDate}
+• Time: ${confirmedTime}
+• Reference: ${refCode}
+
+**Where to go (check-in address)**
+
+${block.text}
+
+**When to arrive**
+Plan to arrive early. Allow about 75 minutes total (check-in, 7-minute FAA safety video, pilot briefing, and flight). Business hours: 7:00 AM – 7:00 PM Hawaii Standard Time.
+
+**What to bring**
+• Cell phone (airplane mode), camera, small plastic water bottle only.
+
+**What NOT to bring**
+• Loose items (hats, purses, backpacks). Lockers are available at check-in.
+
+**What to wear**
+• Dark clothing to reduce glare on the windows (better for photos and views).
+
+**Cancellation**
+Full refund if you cancel 24+ hours before your tour. Call 1-800-745-2583 (7 AM–7 PM HST). No-shows or cancellations within 24 hours are charged the full amount.
+
+If you have any questions, reply to this email or call us at ${phone}.
+
+Have an amazing flight!
+
+Helicopter Tours on Oahu
+
+Reference Code: ${refCode}
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #0c4a6e;">You're Confirmed! Blue Hawaiian Helicopter Tour</h2>
+      <p>Dear ${customerName},</p>
+      <p>You're all set! Blue Hawaiian Helicopters has confirmed your tour.</p>
+      <h3>Your tour</h3>
+      <ul>
+        <li>Tour: ${tourName}</li>
+        <li>Date: ${formattedDate}</li>
+        <li>Time: ${confirmedTime}</li>
+        <li>Reference: ${refCode}</li>
+      </ul>
+      <h3>Where to go (check-in address)</h3>
+      ${block.html}
+      <h3>When to arrive</h3>
+      <p>Plan to arrive early. Allow about 75 minutes total (check-in, 7-minute FAA safety video, pilot briefing, and flight). Business hours: 7:00 AM – 7:00 PM Hawaii Standard Time.</p>
+      <h3>What to bring</h3>
+      <p>Cell phone (airplane mode), camera, small plastic water bottle only.</p>
+      <h3>What NOT to bring</h3>
+      <p>Loose items (hats, purses, backpacks). Lockers are available at check-in.</p>
+      <h3>What to wear</h3>
+      <p>Dark clothing to reduce glare on the windows (better for photos and views).</p>
+      <h3>Cancellation</h3>
+      <p>Full refund if you cancel 24+ hours before your tour. Call 1-800-745-2583 (7 AM–7 PM HST). No-shows or cancellations within 24 hours are charged the full amount.</p>
+      <p>If you have any questions, reply to this email or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong>.</p>
+      <p>Have an amazing flight!<br>Helicopter Tours on Oahu</p>
+      <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
+    </div>
+  `;
+  return sendEmail({
+    to: customerEmail,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
  * Send follow-up email to customer with available time slots and payment request
  * This is sent after availability check completes.
  * - Blue Hawaiian: shows live FareHarbor times when available, or "checking live availability" + phone

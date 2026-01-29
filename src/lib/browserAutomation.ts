@@ -85,12 +85,13 @@ export async function checkAvailabilityBrowserbase({
 
     console.log(`Checking availability on FareHarbor: ${fareHarborUrl}`);
 
+    let sessionId: string | undefined;
     // Create session and connect via Browserbase SDK (required for real scraping)
     const bb = new Browserbase({ apiKey: browserbaseApiKey });
     const session = await bb.sessions.create({
       projectId: browserbaseProjectId,
     });
-    const sessionId = session.id;
+    sessionId = session.id;
     console.log(`Browserbase session created: ${sessionId} for Blue Hawaiian on ${date}`);
 
     // Connect to remote browser and scrape FareHarbor (SDK + Playwright)
@@ -214,7 +215,9 @@ export async function checkAvailabilityBrowserbase({
         source: 'browserbase',
       };
     } catch (error) {
-      console.error('FareHarbor scrape error:', error);
+      const errMsg = error instanceof Error ? error.message : 'Scrape failed';
+      const errStack = error instanceof Error ? error.stack : undefined;
+      console.error('FareHarbor scrape error:', errMsg, errStack ?? '');
       try {
         await browser?.close();
       } catch {
@@ -222,22 +225,32 @@ export async function checkAvailabilityBrowserbase({
       }
       return {
         available: false,
-        error: error instanceof Error ? error.message : 'Scrape failed',
+        error: errMsg,
         source: 'browserbase',
         details: {
           date,
           partySize,
           operator,
-          note: 'Manual check may be required.',
+          sessionId,
+          note: 'Manual check may be required. Look up session in Browserbase dashboard.',
         },
       };
     }
     } catch (error) {
-      console.error('Browserbase availability check error:', error);
+      const errMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errStack = error instanceof Error ? error.stack : undefined;
+      console.error('Browserbase availability check error:', errMsg, errStack ?? '');
       return {
         available: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errMsg,
         source: 'browserbase',
+        details: {
+          date,
+          partySize,
+          operator,
+          sessionId,
+          note: 'Check Vercel logs for stack. Look up session in Browserbase dashboard.',
+        },
       };
     }
   }

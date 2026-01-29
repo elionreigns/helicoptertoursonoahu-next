@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes how the booking system is **supposed to work** end-to-end: Blue Hawaiian vs Rainbow flows, operator emails (from `bookings@helicoptertoursonoahu.com`), follow-up emails, and when the full booking is relayed to each operator. Use this to verify behavior and debug.
+This document describes how the booking system works end-to-end: Blue Hawaiian vs Rainbow flows, operator emails (from `bookings@helicoptertoursonoahu.com`), follow-up emails (first follow-up and final confirmation), and when the full booking is relayed to each operator. **Exact email copy and island addresses** are in **RAINBOW_EMAILS.md**, **RAINBOW_CONFIRMATION.md**, **BLUE_HAWAIIAN_EMAILS.md**, and **BLUE_HAWAIIAN_CONFIRMATION.md**. Use this doc to verify behavior and debug.
 
 ---
 
@@ -32,10 +32,10 @@ All operator emails are sent **from** `bookings@helicoptertoursonoahu.com`. Each
 | 1. Customer submits booking | ✅ | ✅ |
 | 2. Customer confirmation email | ✅ (with phone number) | ✅ (with phone number) |
 | 3. Email to operator on submit | ❌ **No** | ✅ **Availability inquiry only** ("What times do you have on [date]?") |
-| 4. Background: availability + follow-up | ✅ Scrape FareHarbor → follow-up with **slots** + phone | ✅ Follow-up: "We're in contact with Rainbow…" + phone |
-| 5. Customer replies | Chooses a **time slot** (e.g. "2pm works") | Confirms **proposed time** (e.g. "yes" / "confirmed") |
+| 4. Background: availability + follow-up | ✅ Scrape FareHarbor → **first follow-up** with **slots** + "pick one" + payment/missing info (see BLUE_HAWAIIAN_EMAILS.md) | ✅ **First follow-up**: "We're contacting Rainbow…" + **ask for payment and any missing info** (see RAINBOW_EMAILS.md) |
+| 5. Customer replies | Chooses a **time slot** + payment/missing info if needed | Confirms **proposed time** + payment/missing info if needed |
 | 6. Operator gets full booking | ✅ **Only after** customer confirms a time | ✅ **Only after** Rainbow proposed a time **and** customer confirmed |
-| 7. Operator reply (email) | N/A for initial flow | Rainbow replies with a **time** → we ask customer to confirm |
+| 7. Operator reply (email) | Blue Hawaiian confirms → we send **final confirmation** to customer (island address, parking, what to bring) | Rainbow replies with **times** → we email customer to **pick one**; Rainbow confirms → we send **final confirmation** (island address, parking, what to bring) |
 
 ---
 
@@ -62,14 +62,14 @@ All operator emails are sent **from** `bookings@helicoptertoursonoahu.com`. Each
 
 - **API:** `POST /api/check-availability-and-followup` (triggered by `new-booking-request`; can also be called manually or by cron with `refCode`).
 
-**Who gets the follow-up ("Available Tour Times"):**
+**Who gets the follow-up:**
 
 - The follow-up email goes **only to the client** who booked (the person whose email is on the booking). It must **never** go to the operator (Blue Hawaiian / Rainbow), the bookings hub, or the internal test agent. The app blocks sending if `booking.customer_email` is any of those addresses (`isOperatorOrInternalEmail`). If you see "Follow-up email blocked — customer_email is operator/hub/agent" in logs, the booking was created with an operator/agent email as "customer" — use the real client email when submitting the booking.
 
-**What happens:**
+**What happens (exact copy in RAINBOW_EMAILS.md and BLUE_HAWAIIAN_EMAILS.md):**
 
-- **Blue Hawaiian:** Browserbase scrapes FareHarbor for **that specific tour** and date (using FareHarbor links for that tour). It returns available time slots near the client’s requested time; if none that day, the scrape can show the next closest availability. The follow-up email to the **client only** lists those slots and asks them to reply with their chosen time; includes phone number. Only after the client replies with a chosen time do we send the full booking to Blue Hawaiian.
-- **Rainbow:** No live scrape; result is "manual check required." The follow-up email to the **client only** says we're in contact with Rainbow Helicopters to arrange a time close to their date and gives the phone number. A **separate** internal email goes to the agent (e.g. testAgent) to arrange with Rainbow; that is not the same as the client follow-up.
+- **Blue Hawaiian:** Browserbase scrapes FareHarbor for **that specific tour** and date. The **first follow-up** to the **client only** is sent via `sendBlueHawaiianFirstFollowUp`: subject "Available Tour Times for {{refCode}} – Choose Your Time"; body lists available slots (or "checking live availability" fallback), asks for **preferred time** and **payment / any missing info** (party size, weight, hotel). See **BLUE_HAWAIIAN_EMAILS.md** and **BLUE_HAWAIIAN_CONFIRMATION.md**. Only after the client replies with a chosen time do we send the full booking to Blue Hawaiian.
+- **Rainbow:** No live scrape. The **first follow-up** to the **client only** is sent via `sendRainbowFirstFollowUp`: subject "Available Tour Times for {{refCode}} – We're Contacting Rainbow & Need Your Details"; body says we're in contact with Rainbow for times and **asks for payment and any missing booking info** (name, party size, weight, hotel, etc.). See **RAINBOW_EMAILS.md** and **RAINBOW_CONFIRMATION.md**. A **separate** internal email goes to the agent (e.g. testAgent) to arrange with Rainbow; that is not the same as the client follow-up.
 
 **Important:** This endpoint runs on your Vercel deployment. If the deployment is protected (password/Vercel Auth), the server-side call from `new-booking-request` will get **401** unless you use **Protection Bypass for Automation**. The app sends the header `x-vercel-protection-bypass` with `VERCEL_AUTOMATION_BYPASS_SECRET` when that env var is set.
 
@@ -102,10 +102,10 @@ All operator emails are sent **from** `bookings@helicoptertoursonoahu.com`. Each
 - App finds the booking (by refCode in subject/body or by operator email + latest booking).
 - `parseOperatorReply()` extracts a **proposed time** (from `notes` or `availableDates`).
 - If operator is Rainbow and a proposed time is present (and it’s not a full confirmation/rejection), the app:
-  - Stores `metadata.operator_proposed_time` and updates status to `awaiting_payment`.
-  - Sends the **client** an email with the available times and asks them to (a) reply with which time they want and (b) provide payment information if they haven't already (so we can forward everything to Rainbow in one go).
+  - Stores `metadata.operator_proposed_time` and `metadata.operator_available_times`; status → `awaiting_payment`.
+  - Sends the **client** an email via **`sendRainbowTimesToCustomer`**: subject "{{refCode}} – Rainbow Has Times for You – Pick One & Confirm"; body lists the times and asks them to reply with which time works and payment info if not already sent. See **RAINBOW_EMAILS.md** #2.
 
-**Result:** Client is asked to confirm a time and provide payment info before we relay the full booking to Rainbow.
+**Result:** Client is asked to pick a time and provide payment info (if needed) before we relay the full booking to Rainbow.
 
 ---
 
@@ -123,18 +123,20 @@ All operator emails are sent **from** `bookings@helicoptertoursonoahu.com`. Each
 
 ---
 
-### 6. Operator Reply: Other Cases (Confirmation, Rejection, Alternatives)
+### 6. Operator Reply: Confirmation ("It's a go"), Rejection, Alternatives
 
 - **API:** `POST /api/operator-reply` (same as step 4).
 
 **Parsed outcomes:**
 
-- **Confirmation / "It's a go":** Operator confirms the booking (e.g. with confirmation number or says it's booked). → Status `confirmed`. We send the **client** a final confirmation email with: when to show up, time scheduled, where to park, address, and any other details they need — booking confirmed.
+- **Confirmation / "It's a go":** Operator confirms the booking (e.g. with confirmation number or says it's booked). → Status `confirmed`. We send the **client** an **operator-specific final confirmation** email:
+  - **Rainbow:** `sendRainbowFinalConfirmation` — subject "{{refCode}} – You're Confirmed! Rainbow Helicopter Tour – Where to Go & What to Know"; body includes tour/time, **check-in address by island** (Oahu: 155 Kapalulu Pl, Honolulu; Big Island: 73-4370 Pao'o St, Kailua-Kona), when to arrive (15–30 min early), what to bring / what not to bring, parking. Island from `booking.metadata.island` (default `oahu`). See **RAINBOW_EMAILS.md** #3 and **RAINBOW_CONFIRMATION.md**.
+  - **Blue Hawaiian:** `sendBlueHawaiianFinalConfirmation` — subject "{{refCode}} – You're Confirmed! Blue Hawaiian Helicopter Tour – Where to Go & What to Know"; body includes tour/time, **check-in address by island** (Oahu, Maui, Kauai, Big Island — addresses in **BLUE_HAWAIIAN_EMAILS.md** and **BLUE_HAWAIIAN_CONFIRMATION.md**), 75 minutes total (safety video, briefing, flight), what to bring / what NOT to bring, dark clothing, cancellation policy. Island from `booking.metadata.island` (default `oahu`).
 - **Will handle directly:** Operator says they’ll contact the customer. → Status `awaiting_operator_response`, customer gets “operator will contact you” email.
 - **Rejection:** Not available. → Customer gets “alternative options” message.
 - **Alternative dates:** Operator lists other dates. → Customer gets email listing those dates.
 
-These apply to both operators; the **Rainbow “proposed time”** branch (step 4) is evaluated first when the reply is from Rainbow and contains a time.
+The **Rainbow “proposed time”** branch (step 4) is evaluated first when the reply is from Rainbow and contains times (not a full confirmation).
 
 ---
 
@@ -147,8 +149,8 @@ These apply to both operators; the **Rainbow “proposed time”** branch (step 
 #### Blue Hawaiian flow
 
 1. **Submit:** Client submits → **bookings@** has the booking; **client** gets confirmation + phone. We do **not** email Blue Hawaiian yet.
-2. **Scrape then contact client:** We scrape FareHarbor for that tour/date and get available times (near their preference or next closest). We send a **follow-up to the client only** with those times and ask them to reply with which slot they want.
-3. **Client picks time:** Client replies with chosen time (and payment/missing info if we asked). We then send **Blue Hawaiian** the full client information and the chosen time (availability question answered by client choice).
+2. **Scrape then contact client:** We scrape FareHarbor for that tour/date and get available times. We send **first follow-up** to the client only via `sendBlueHawaiianFirstFollowUp`: available times + "pick one" + payment/missing info (see **BLUE_HAWAIIAN_EMAILS.md**).
+3. **Client picks time:** Client replies with chosen time (and payment/missing info if needed). We then send **Blue Hawaiian** the full client information and the chosen time.
 4. **Blue Hawaiian confirms:** When they confirm, we email the **client** that it’s a go and ask for anything we’re still missing (payment, weight, anything they didn’t fill out) and confirm the time.
 5. **Client sends missing info:** When the client replies with payment or other info, we forward **everything** to Blue Hawaiian; they book it on their end with the client’s information.
 6. **Operator says it’s a go:** When Blue Hawaiian responds to us that it’s booked, we send the **client** a final confirmation email with: when to show up, time scheduled, where to park, address, and any other details they need — booking confirmed.
@@ -159,7 +161,7 @@ These apply to both operators; the **Rainbow “proposed time”** branch (step 
 
 1. **Submit:** Client submits → **bookings@** has the booking; **client** gets confirmation + phone. We send **Rainbow** an availability inquiry with **all initial customer information** and ask: what times do you have?
 2. **Follow-up to client:** We send the **client** a follow-up: “We’re in contact with Rainbow…” + phone (no specific times yet). A separate internal email goes to the agent to arrange with Rainbow.
-3. **Rainbow replies with times:** Rainbow replies with when they can do it. We message the **client** with those available times and ask them to (a) pick a time and (b) provide payment information (we ask for both in that email).
+3. **Rainbow replies with times:** Rainbow replies with available times. We email the **client** via `sendRainbowTimesToCustomer`: list times + "pick one" + payment if not already sent (see **RAINBOW_EMAILS.md** #2).
 4. **Client confirms + payment:** Client replies with which time and payment info. We send **Rainbow** the full client information, chosen time, and payment details.
 5. **Rainbow confirms:** When Rainbow confirms the booking is done, we send the **client** a final confirmation email with: where to park, when to show up, address, what they need to know, and that it’s confirmed.
 
@@ -174,21 +176,24 @@ These apply to both operators; the **Rainbow “proposed time”** branch (step 
 | `POST /api/new-booking-request` | Create booking; send customer confirmation; Rainbow → availability inquiry only; Blue Hawaiian → no operator email; trigger check-availability-and-followup |
 | `POST /api/check-availability-and-followup` | Load booking by refCode; check availability (scrape BH / manual Rainbow); send follow-up email to customer; update status |
 | `POST /api/customer-reply` | Match customer by email; store message; if chosen time (BH) or confirm (Rainbow) → send full booking to operator |
-| `POST /api/operator-reply` | Match booking by refCode/operator; parse reply; Rainbow proposed time → email customer to confirm; else confirmation/rejection/alternatives |
+| `POST /api/operator-reply` | Match booking by refCode/operator; parse reply; Rainbow times → `sendRainbowTimesToCustomer`; operator confirms → `sendRainbowFinalConfirmation` or `sendBlueHawaiianFinalConfirmation`; else rejection/alternatives |
 
 ### Key Files
 
-- **Operator emails & flow:** `src/lib/email.ts` (`sendBookingRequestToOperator`, `sendRainbowAvailabilityInquiry`; operator email to single recipient + copy to hub)
+- **Operator emails & flow:** `src/lib/email.ts` — `sendBookingRequestToOperator`, `sendRainbowAvailabilityInquiry`; **first follow-up:** `sendRainbowFirstFollowUp` (Rainbow), `sendBlueHawaiianFirstFollowUp` (Blue Hawaiian); **Rainbow times:** `sendRainbowTimesToCustomer`; **final confirmation:** `sendRainbowFinalConfirmation`, `sendBlueHawaiianFinalConfirmation` (island-specific addresses). Operator email to single recipient + copy to hub.
 - **New booking:** `src/app/api/new-booking-request/route.ts` (Rainbow inquiry only; Blue Hawaiian no operator email; triggers follow-up API with bypass header)
-- **Follow-up:** `src/app/api/check-availability-and-followup/route.ts` (availability + follow-up email **to client only**; uses `isOperatorOrInternalEmail` to block sending to operator/hub/agent)
+- **Follow-up:** `src/app/api/check-availability-and-followup/route.ts` (availability + first follow-up **to client only** via `sendRainbowFirstFollowUp` or `sendBlueHawaiianFirstFollowUp`; uses `isOperatorOrInternalEmail` to block sending to operator/hub/agent)
 - **Customer reply:** `src/app/api/customer-reply/route.ts` (`analyzeCustomerAvailabilityReply`; send full booking to operator when time chosen/confirmed)
-- **Operator reply:** `src/app/api/operator-reply/route.ts` (Rainbow proposed time → customer confirm; other outcomes as above)
+- **Operator reply:** `src/app/api/operator-reply/route.ts` (Rainbow times → `sendRainbowTimesToCustomer`; operator confirms → `sendRainbowFinalConfirmation` or `sendBlueHawaiianFinalConfirmation`; other outcomes as above)
 - **Addresses:** `src/lib/constants.ts` (emails, operators, VAPI_PHONE_NUMBER, `isOperatorOrInternalEmail`)
+- **Exact email copy & addresses:** **RAINBOW_EMAILS.md**, **RAINBOW_CONFIRMATION.md**, **BLUE_HAWAIIAN_EMAILS.md**, **BLUE_HAWAIIAN_CONFIRMATION.md**
 
 ### Metadata (bookings.metadata)
 
 - `operator_email_sent_at` – When we sent the **full** booking to the operator (so we don’t send twice).
 - `operator_proposed_time` – (Rainbow) Time proposed by Rainbow; we ask customer to confirm.
+- `operator_available_times` – (Rainbow) List of times from Rainbow reply; used in `sendRainbowTimesToCustomer`.
+- `island` – Island for final confirmation address (e.g. `oahu`, `maui`, `kauai`, `big_island`). Default `oahu` if not set. Used by `sendRainbowFinalConfirmation` and `sendBlueHawaiianFinalConfirmation`.
 - `availability_check` – Result of scrape or manual check.
 - `follow_up_email_sent`, `follow_up_email_sent_at` – Follow-up email tracking.
 - `confirmed_time` – Time we sent to the operator after customer confirmation.
@@ -224,6 +229,33 @@ Edit **`src/lib/constants.ts`**: update `emails.blueHawaiian` and `emails.rainbo
 
 ---
 
+## Reply-to-Inbound: Make Sure It All Works
+
+When someone **replies** to an email from the app (e.g. customer confirms a time, or Rainbow replies with availability), that reply must reach the app so it can run `customer-reply` or `operator-reply`.
+
+**Flow:**
+
+1. Outgoing emails use **Reply-To: REPLY_TO_INBOUND** (from Vercel env), e.g. `helicopter@goudamo.resend.app`.
+2. The reply goes to that address; **Resend** receives it (Emails → Receiving must be on).
+3. Resend POSTs **email.received** to `https://booking.helicoptertoursonoahu.com/api/webhooks/resend-inbound`.
+4. The webhook fetches the email body via Resend API, then POSTs to **/api/operator-reply** (if from = Blue Hawaiian or Rainbow) or **/api/customer-reply** (otherwise).
+
+**Checklist:**
+
+| Step | Where | What to do |
+|------|--------|-------------|
+| 1 | Vercel → Environment Variables | **REPLY_TO_INBOUND** = your Resend receiving address (e.g. `helicopter@goudamo.resend.app`). **RESEND_API_KEY** set (needed for sending and for webhook to fetch body). |
+| 2 | Resend → Emails → Receiving | Turn on receiving; use the free .resend.app address (no Add domain). |
+| 3 | Resend → Webhooks | Add webhook: URL = `https://booking.helicoptertoursonoahu.com/api/webhooks/resend-inbound`, event = **email.received** only. Optional: set **RESEND_WEBHOOK_SECRET** in Vercel (Signing secret from Resend) to verify webhooks. |
+| 4 | Vercel → Deployment Protection | If enabled, set **VERCEL_AUTOMATION_BYPASS_SECRET** so the webhook’s internal call to customer-reply/operator-reply doesn’t get 401. |
+| 5 | Redeploy | So env vars and code are live. |
+
+**Verify:** Send a reply to an email the app sent (e.g. from the customer address). In Vercel Logs look for: `Resend Inbound: routed to /api/customer-reply from …` or `…/api/operator-reply`. If you see `Resend Inbound: API call failed` or `Invalid signature`, check ERROR_LOG.md and RESEND_INBOUND_CHECKLIST.md.
+
+**Errors:** See **ERROR_LOG.md** for logged issues (e.g. 535 email, Browserbase script failed). Add new errors there after retries.
+
+---
+
 ## How to Verify It Works
 
 1. **Operator receives mail from bookings@**
@@ -241,6 +273,8 @@ Edit **`src/lib/constants.ts`**: update `emails.blueHawaiian` and `emails.rainbo
 
 ## Troubleshooting
 
+See **ERROR_LOG.md** for logged errors (email 535, Browserbase script failed, etc.) and add new ones after retries.
+
 | Symptom | Check |
 |--------|--------|
 | No follow-up email | Vercel logs for 401 on check-availability-and-followup; set `VERCEL_AUTOMATION_BYPASS_SECRET` and redeploy. |
@@ -248,6 +282,7 @@ Edit **`src/lib/constants.ts`**: update `emails.blueHawaiian` and `emails.rainbo
 | Operator never gets email | Rainbow: did you send the **availability inquiry** on booking? Blue Hawaiian: did the customer reply with a **chosen time**? Check `metadata.operator_email_sent_at`. |
 | 401 on follow-up API | Deployment Protection on + no bypass. Enable Protection Bypass for Automation or set `VERCEL_AUTOMATION_BYPASS_SECRET`. |
 | Customer didn’t get "confirm your time" (Rainbow) | Operator reply must be sent to `POST /api/operator-reply` with body containing the proposed time; refCode or subject helps match the booking. |
+| Reply to email not processed (inbound) | **Reply-to-inbound** (above): REPLY_TO_INBOUND in Vercel, Resend Receiving on, webhook URL with `email.received`. Check Vercel logs for "Resend Inbound: routed to" or "API call failed". If "Invalid signature", set RESEND_WEBHOOK_SECRET to the Signing secret from Resend or leave unset to skip verification. |
 
 Manual trigger for follow-up (e.g. for testing):
 
@@ -266,11 +301,11 @@ If the deployment is protected, add the bypass header (or use a URL with the byp
 | Event | Client (email for this booking) | Blue Hawaiian | Rainbow | bookings@ |
 |-------|----------------------------------|----------------|---------|-----------|
 | Booking submitted | Confirmation + phone | Nothing | Availability inquiry + all initial client info | Copy of inquiry + record |
-| Follow-up (background) | Slots (BH) or "in contact with Rainbow" + phone | Nothing | Nothing | — |
+| Follow-up (background) | BH: `sendBlueHawaiianFirstFollowUp` (slots + pick one + payment). Rainbow: `sendRainbowFirstFollowUp` (we're contacting Rainbow + ask payment/missing info). | Nothing | Nothing | — |
 | Client says "2pm" (BH) | — | **Full booking** (client info + time) | — | Copy |
-| Rainbow replies "2pm available" | Available times + ask for payment | — | — | — |
+| Rainbow replies "2pm available" | `sendRainbowTimesToCustomer`: list times + pick one + payment if needed | — | — | — |
 | Client says "yes" + payment (Rainbow) | — | — | **Full booking** (client info + time + payment) | Copy |
-| Operator says "it's a go" | **Final confirmation:** when to show up, time, where to park, address, confirmed | — | — | — |
+| Operator says "it's a go" | **Final confirmation (operator-specific):** Rainbow → `sendRainbowFinalConfirmation` (island address, parking, what to bring); Blue Hawaiian → `sendBlueHawaiianFinalConfirmation` (island address, 75 min, cancellation). See RAINBOW_EMAILS.md #3, BLUE_HAWAIIAN_EMAILS.md #2. | — | — | — |
 
 **Emails:** Rainbow and Blue Hawaiian addresses are fixed (same for all bookings). The **client** email is whatever they entered in the form for **this** booking and changes every time a new person books. **bookings@** gets copies and holds the record.
 
