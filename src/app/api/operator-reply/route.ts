@@ -121,11 +121,26 @@ export async function POST(request: NextRequest) {
     };
 
     const isRainbow = booking?.operator_name?.toLowerCase().includes('rainbow');
-    const proposedTime = parsed.notes || (parsed.availableDates && parsed.availableDates.length > 0 ? parsed.availableDates[0] : null);
+    // Proposed time: from parser (notes or availableDates) or fallback regex for "available tomorrow at 2" etc.
+    let proposedTime = parsed.notes || (parsed.availableDates && parsed.availableDates.length > 0 ? parsed.availableDates[0] : null);
+    if (!proposedTime && validated.emailContent) {
+      const content = validated.emailContent.trim();
+      // Fallback: "available tomorrow at 2", "available at 2pm", "we have 2pm" – use full phrase for short replies
+      if (content.length < 100 && !/\b(not|unavailable|no)\s+available\b/i.test(content)) {
+        const firstLine = content.split(/\n/)[0].trim();
+        if (/\b(available|have|we have)\b.*\d|^\d{1,2}\s*(?:am|pm)?/i.test(firstLine) || firstLine.length < 50) {
+          proposedTime = firstLine;
+        }
+      }
+      if (!proposedTime) {
+        const timeMatch = content.match(/(\d{1,2}\s*(?:am|pm)(?:\s+and\s+\d{1,2}\s*(?:am|pm))?)/gi);
+        if (timeMatch && timeMatch.length > 0) proposedTime = timeMatch[0].trim();
+      }
+    }
+    const timesList = (parsed.availableDates && parsed.availableDates.length > 0) ? parsed.availableDates : (proposedTime ? [proposedTime] : []);
 
     // Rainbow: operator replied with available times → email customer to pick one (RAINBOW_EMAILS.md #2)
-    if (isRainbow && (proposedTime || (parsed.availableDates && parsed.availableDates.length > 0)) && !parsed.isConfirmation && !parsed.isRejection && !parsed.willHandleDirectly) {
-      const timesList = (parsed.availableDates && parsed.availableDates.length > 0) ? parsed.availableDates : (proposedTime ? [proposedTime] : []);
+    if (isRainbow && (proposedTime || timesList.length > 0) && !parsed.isConfirmation && !parsed.isRejection && !parsed.willHandleDirectly) {
       newStatus = bookingStatuses.AWAITING_PAYMENT;
       updateData.status = newStatus;
       updateData.metadata = {

@@ -132,14 +132,20 @@ export async function POST(request: NextRequest) {
       if (analysis.extractedData.specialRequests) updateData.special_requests = analysis.extractedData.specialRequests;
     }
 
-    // If customer is confirming a time (Blue Hawaiian: chosen slot; Rainbow: confirm proposed time), send full booking to operator
+    // If customer is confirming a time (Blue Hawaiian: chosen slot; Rainbow: confirm proposed time or replying with payment/details), send full booking to operator
     const opKey = booking.operator_name?.toLowerCase().includes('rainbow') ? 'rainbow' : 'blueHawaiian';
     const operator = operators[opKey];
     if (operator && !operatorEmailSentAt) {
       const availabilityReply = await analyzeCustomerAvailabilityReply(validated.emailContent);
+      // Rainbow: send when they explicitly confirm time OR when they reply with payment/details and we have a proposed time (implicit confirm)
+      const replyHasPaymentOrDetails =
+        /\d{4,}/.test(validated.emailContent) ||
+        /\b(weight|payment|card|info|number|expiry|cvc|billing)\b/i.test(validated.emailContent);
       const shouldSendToOperator =
         (opKey === 'blueHawaiian' && availabilityReply.chosenTimeSlot) ||
-        (opKey === 'rainbow' && availabilityReply.confirmsProposedTime && operatorProposedTime);
+        (opKey === 'rainbow' &&
+          operatorProposedTime &&
+          (availabilityReply.confirmsProposedTime || replyHasPaymentOrDetails));
 
       if (shouldSendToOperator) {
         const tourId = (prevMeta.tour_id as string) || (prevMeta.tour_name as string);

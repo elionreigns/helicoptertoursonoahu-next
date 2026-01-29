@@ -207,14 +207,14 @@ Return JSON only:
 }
 
 /**
- * Parse operator reply to extract booking confirmation details
+ * Parse operator reply to extract booking confirmation details and proposed times
  */
 export async function parseOperatorReply(content: string): Promise<{
   isConfirmation: boolean;
   isRejection: boolean;
   willHandleDirectly: boolean; // Operator says they'll contact customer directly
   confirmationNumber?: string;
-  availableDates?: string[];
+  availableDates?: string[]; // dates OR proposed time slots (e.g. "2:00 PM", "tomorrow at 2")
   price?: number;
   notes?: string;
 }> {
@@ -224,18 +224,25 @@ export async function parseOperatorReply(content: string): Promise<{
       messages: [
         {
           role: 'system',
-          content: `You are parsing operator replies for helicopter tour bookings. Extract:
-1. Is this a confirmation? (isConfirmation: boolean) - operator confirms booking is set
-2. Is this a rejection? (isRejection: boolean) - operator says not available
-3. Will operator handle directly? (willHandleDirectly: boolean) - operator says "we'll contact them", "we'll handle it", "we'll reach out", etc.
-4. Confirmation number if present
-5. Available dates mentioned
-6. Price quoted
-7. Any notes or special instructions
+          content: `You are parsing operator (helicopter company) replies for tour bookings. Extract:
+
+1. isConfirmation (boolean) - true only if operator clearly confirms the booking is set (e.g. "confirmed", "booked", "you're all set").
+2. isRejection (boolean) - operator says not available for that date.
+3. willHandleDirectly (boolean) - operator says they'll contact the customer directly.
+4. confirmationNumber - any booking/confirmation number mentioned.
+5. availableDates - IMPORTANT: When the operator offers when they ARE available, put each time slot here as a string. Examples:
+   - "available tomorrow at 2" → ["2:00 PM"] or ["tomorrow at 2"]
+   - "we have 2pm and 4pm" → ["2:00 PM", "4:00 PM"]
+   - "2pm works" → ["2:00 PM"]
+   - "tomorrow at 2pm" → ["2:00 PM tomorrow"]
+   Always extract proposed times into availableDates so we can tell the customer.
+6. price - number if quoted.
+7. notes - any other instructions or the raw availability phrase if useful.
 
 Examples:
+- "available tomorrow at 2" → isConfirmation: false, availableDates: ["2:00 PM"], notes: "available tomorrow at 2"
+- "We have 2pm and 4pm available" → availableDates: ["2:00 PM", "4:00 PM"]
 - "Confirmed! Booking #12345" → isConfirmation: true
-- "We'll contact the customer directly" → willHandleDirectly: true
 - "Not available on that date" → isRejection: true
 
 Return JSON only:
@@ -255,7 +262,7 @@ Return JSON only:
         },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.3,
+      temperature: 0.2,
     });
 
     const result = JSON.parse(response.choices[0].message.content || '{}');
@@ -264,8 +271,8 @@ Return JSON only:
       isRejection: result.isRejection || false,
       willHandleDirectly: result.willHandleDirectly || false,
       confirmationNumber: result.confirmationNumber || undefined,
-      availableDates: result.availableDates || undefined,
-      price: result.price || undefined,
+      availableDates: Array.isArray(result.availableDates) ? result.availableDates : undefined,
+      price: result.price ?? undefined,
       notes: result.notes || undefined,
     };
   } catch (error) {

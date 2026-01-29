@@ -121,8 +121,11 @@ export async function POST(request: NextRequest) {
 
     const isOperator = OPERATOR_EMAILS.includes(fromEmail);
     const endpoint = isOperator ? '/api/operator-reply' : '/api/customer-reply';
+    // Extract refCode from subject (e.g. "Re: Availability inquiry HTO-S7GPQ4 - Erix") so operator-reply can find the booking
+    const refCodeMatch = subject.match(/HTO-[A-Z0-9]{6}/);
+    const refCode = refCodeMatch ? refCodeMatch[0] : undefined;
     const body = isOperator
-      ? { emailContent, fromEmail, subject }
+      ? { emailContent, fromEmail, subject, refCode }
       : { emailContent, fromEmail, subject };
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
