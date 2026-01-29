@@ -143,7 +143,6 @@ export async function POST(request: NextRequest) {
           phoneNumber: VAPI_PHONE_NUMBER,
         });
       }
-      }
 
       if (emailResult.success) {
         console.log('✅ Availability follow-up email sent successfully to:', booking.customer_email);
