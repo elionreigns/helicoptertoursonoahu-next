@@ -153,6 +153,8 @@ export async function sendBookingRequestToOperator({
   refCode,
   tourName,
   totalPrice,
+  customerConfirmedTime,
+  operatorPaymentLink,
 }: {
   operatorEmail: string;
   operatorName: string;
