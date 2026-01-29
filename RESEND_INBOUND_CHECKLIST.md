@@ -54,7 +54,7 @@ Use this checklist. The app code is already in place; you only set things in Res
 
 | Name | Value | Where you get it |
 |------|--------|-------------------|
-| **RESEND_API_KEY** | `re_xxxx...` | Resend → API Keys (you likely have this) |
+| **RESEND_API_KEY** | `re_xxxx...` | Resend → API Keys. **Must have Receiving scope** (or full access). If you see "This API key is restricted to only send emails" when a reply is received, create a new key with **full access** or enable **Receiving** so the webhook can fetch the email body. |
 | **RESEND_FROM** | `Helicopter Tours <bookings@helicoptertoursonoahu.com>` | Your sending address |
 | **REPLY_TO_INBOUND** | Your Resend receiving address (e.g. `helicopter@goudamo.resend.app`) | Resend → Emails → Receiving → use &lt;anything&gt;@your-id.resend.app (free) |
 | **RESEND_WEBHOOK_SECRET** | The **Signing secret** from the webhook you just created | Resend → Webhooks → your webhook → Signing secret (optional but recommended) |

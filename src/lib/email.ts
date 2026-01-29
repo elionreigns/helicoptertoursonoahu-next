@@ -67,14 +67,26 @@ async function sendViaResend(
   if (html) body.html = html;
   if (text) body.text = text;
 
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
+  const doSend = async (attempt = 0): Promise<Response> => {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+    });
+    // Resend limit: 2 req/sec — on 429 retry after backoff (max 2 retries)
+    if (res.status === 429 && attempt < 2) {
+      const waitMs = 1200 + attempt * 800;
+      console.warn(`Resend 429 rate limit, retrying in ${waitMs}ms (attempt ${attempt + 1})`);
+      await new Promise((r) => setTimeout(r, waitMs));
+      return doSend(attempt + 1);
+    }
+    return res;
+  };
+
+  const res = await doSend();
   const data = (await res.json()) as { id?: string; message?: string };
   if (!res.ok) {
     const err = data?.message || res.statusText || 'Resend API error';

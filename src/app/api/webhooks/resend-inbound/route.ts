@@ -92,6 +92,11 @@ export async function POST(request: NextRequest) {
     if (!res.ok) {
       const err = await res.text();
       console.error('Resend Inbound: failed to fetch email', emailId, res.status, err);
+      if (res.status === 401 && err.includes('restricted') && err.includes('send')) {
+        console.error(
+          'Resend Inbound: API key is restricted to sending only. To fetch received emails, use an API key with Receiving scope. Resend Dashboard → API Keys → create key with full access or enable Receiving.'
+        );
+      }
       return NextResponse.json({ error: 'Failed to fetch email' }, { status: 502 });
     }
 

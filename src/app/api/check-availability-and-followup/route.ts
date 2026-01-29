@@ -105,7 +105,8 @@ export async function POST(request: NextRequest) {
     const totalPrice = pricePerPerson * (booking.party_size || 2);
 
     // Send follow-up email with availability — TO THE CLIENT ONLY (never to operator/hub/agent)
-    // CRITICAL: This email must be sent even if availability check fails
+    // Resend rate limit: 2 req/sec — wait so new-booking-request (inquiry + confirmation) can finish first
+    await new Promise((r) => setTimeout(r, 1500));
     let emailResult;
     try {
       // Ensure we have required data
@@ -149,6 +150,8 @@ export async function POST(request: NextRequest) {
         // When Rainbow: also notify the internal agent to arrange with Rainbow
         if (operatorKey === 'rainbow' && emails.testAgent) {
           try {
+            // Resend rate limit: 2 req/sec — delay before next send
+            await new Promise((r) => setTimeout(r, 600));
             await sendRainbowArrangeNotificationToAgent({
               agentEmail: emails.testAgent,
               refCode: booking.ref_code || '',

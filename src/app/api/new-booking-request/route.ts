@@ -255,6 +255,8 @@ export async function POST(request: NextRequest) {
         } else {
           console.error('Rainbow availability inquiry failed:', inquiryResult.error);
         }
+        // Resend rate limit: 2 req/sec — delay before next send
+        await new Promise((r) => setTimeout(r, 800));
       }
       // Blue Hawaiian: no operator email on booking; operator gets full details when customer confirms a time
       if (operatorKey === 'blueHawaiian') {

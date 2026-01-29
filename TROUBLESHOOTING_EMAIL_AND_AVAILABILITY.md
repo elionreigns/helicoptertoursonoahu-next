@@ -43,9 +43,34 @@ When `RESEND_API_KEY` is set, the app uses Resend for all outgoing email and **d
 
 ---
 
+## 3. Resend: "429 Too many requests. You can only make 2 requests per second"
+
+**What it means:** Resend limits to 2 API calls per second. The app sends several emails in quick succession (inquiry, confirmation, follow-up, agent notification) and can hit this limit.
+
+**Fix (done in code):**
+- Delays between sends: 800 ms after Rainbow inquiry before confirmation; 1.5 s before the follow-up route sends so it doesn’t overlap with new-booking-request; 600 ms before agent notification.
+- **429 retry:** Each send that gets 429 is retried up to 2 times with backoff (1.2 s, then 2 s). If you still see "Confirmation email failed: Too many requests" after deploy, contact Resend support to increase your rate limit.
+
+---
+
+## 4. Resend Inbound: "This API key is restricted to only send emails" (401)
+
+**What it means:** When someone replies to an email, Resend sends a webhook. The app then fetches the full email body via `GET https://api.resend.com/emails/receiving/{id}`. That call requires an API key with **Receiving** (read) permission. If your key is restricted to "send only", you get 401.
+
+**Fix**
+
+1. In **Resend** → **API Keys** → create a **new** API key.
+2. Give it **full access** (or at least **Sending** + **Receiving**).
+3. In **Vercel** → Environment Variables, set **RESEND_API_KEY** to this new key (Production + Preview).
+4. **Redeploy.** After that, the inbound webhook can fetch received emails and route them to operator-reply or customer-reply.
+
+---
+
 ## Quick checklist
 
 | Issue | Action |
 |--------|--------|
 | 535 email | Set **RESEND_API_KEY** in Vercel (and redeploy), or fix SMTP credentials. |
+| 429 Resend | Delays are in place; if it persists, contact Resend or increase spacing. |
+| Inbound 401 (restricted key) | Use a Resend API key with **Receiving** scope (or full access). |
 | Browserbase script failed | Verify **BROWSERBASE_API_KEY** / **BROWSERBASE_PROJECT_ID**; check session in Browserbase; confirm FareHarbor page/selectors. |
