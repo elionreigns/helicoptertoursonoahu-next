@@ -163,7 +163,7 @@ Once you pick A, B, or C, we can implement the corresponding flow and update the
 - URL format: `https://booking.helicoptertoursonoahu.com/secure-payment?ref=HTO-XXXXXX&token=...`
 - Token is a signed token (HMAC) so only someone with the link can submit; expires after a set period (e.g. 7 days).
 - Page shows a form: name on card, full card number, expiry, CVC, billing address, ZIP. Submit goes to `POST /api/secure-payment`.
-- API verifies token, encrypts payload (AES-256-GCM) with `PAYMENT_ENCRYPTION_KEY` (env), stores in `secure_payments` table (Supabase). Sets `metadata.secure_payment_received_at` on the booking. **Never** logs or emails card data.
+- API verifies token, encrypts payload (AES-256-GCM) using the encryption key from env, stores in `secure_payments` table (Supabase). Sets `metadata.secure_payment_received_at` on the booking. **Never** logs or emails card data.
 
 ### 4. Getting payment to the operator
 - We **never** put full card number or CVC in any email.
@@ -171,7 +171,7 @@ Once you pick A, B, or C, we can implement the corresponding flow and update the
 - Link: `GET /api/operator-payment?ref=HTO-XXX&token=one-time-secret`. That API fetches the encrypted payload, decrypts it, shows the card details **once** in a minimal HTML page, then marks the record as consumed (so the link cannot be used again).
 
 ### 5. Environment and database
-- **PAYMENT_ENCRYPTION_KEY:** 32-byte hex or base64 key (e.g. `openssl rand -hex 32`) in Vercel env. Used only to encrypt/decrypt card payloads; never in GitHub.
+- **Vercel env:** The app expects payment-related secrets (encryption key and link-signing secret) to be set in Vercel; names and values are not documented in this repo.
 - **Supabase:** New table `secure_payments` (see `supabase-secure-payments.sql`): `ref_code`, `encrypted_payload`, `created_at`, `consumed_at`, `operator_token`. Run the migration once in Supabase.
 
 ### 6. Email copy
@@ -182,7 +182,4 @@ Once you pick A, B, or C, we can implement the corresponding flow and update the
 
 ### 7. Setup (Vercel + Supabase)
 1. **Supabase:** Run `supabase-secure-payments.sql` once in the Supabase SQL Editor (Dashboard → SQL Editor) to create the `secure_payments` table.
-2. **Vercel env:**
-   - **PAYMENT_LINK_SECRET:** A secret string (e.g. 32+ chars, or run `openssl rand -hex 32`). Used to sign the customer secure-payment link token. Do not commit to GitHub.
-   - **PAYMENT_ENCRYPTION_KEY:** 32-byte key in hex (64 hex chars). Run `openssl rand -hex 32` and set the value. Used to encrypt card payloads in `secure_payments`. Do not commit to GitHub.
-3. If these env vars are not set, the confirmation email will not include a secure payment link, and the secure payment page/API will fail (customer and operator flows will still work without full card capture).
+2. **Vercel env:** Set the two payment-related environment variables required by the app (see Vercel or private docs). Do not commit values to GitHub. If they are not set, the confirmation email will not include a secure payment link, and the secure payment page/API will fail (customer and operator flows will still work without full card capture).
