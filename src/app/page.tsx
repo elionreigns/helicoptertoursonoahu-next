@@ -1,4 +1,17 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online',
+  description:
+    'Book helicopter tours on Oahu with Blue Hawaiian & Rainbow Helicopters. Compare Oahu helicopter tours, prices & doors-off options. Safe, scenic Hawaii helicopter tours—book online.',
+  openGraph: {
+    title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours',
+    description: 'Book Oahu helicopter tours with Blue Hawaiian & Rainbow. Compare and book online. Safe, scenic, personalized.',
+    url: 'https://booking.helicoptertoursonoahu.com',
+  },
+  alternates: { canonical: 'https://booking.helicoptertoursonoahu.com' },
+};
 
 export default function Home() {
   return (
@@ -18,7 +31,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 via-blue-800/40 to-indigo-900/50 z-[1]" aria-hidden />
         <div className="container mx-auto max-w-4xl text-center relative z-10 text-white">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight drop-shadow-sm">
-            Book Your Oahu Helicopter Tour Now
+            Helicopter Tours on Oahu — Book Now
           </h1>
           <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
             Safe • Scenic • Personalized with Blue Hawaiian & Rainbow Helicopters

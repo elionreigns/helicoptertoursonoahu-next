@@ -4,27 +4,55 @@ import "./globals.css";
 import Link from "next/link";
 import Header from "@/components/Header";
 import BookingChatbot from "@/components/BookingChatbot";
+import JsonLd from "@/components/JsonLd";
 
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
 });
 
+const SITE_URL = "https://booking.helicoptertoursonoahu.com";
+const OG_IMAGE = "https://www.helicoptertoursonoahu.com/images/helicoptertours-bluehawaiian.webp";
+
 export const metadata: Metadata = {
-  title: "Helicopter Tours on Oahu - Book Now",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online",
+    template: "%s | Helicopter Tours on Oahu",
+  },
   description:
-    "Book your Oahu helicopter tour with Blue Hawaiian & Rainbow Helicopters. Safe, scenic, personalized experiences. Compare operators and book online.",
+    "Book helicopter tours on Oahu with Blue Hawaiian & Rainbow Helicopters. Compare Oahu helicopter tours, prices & doors-off options. Safe, scenic Hawaii helicopter tours—book online or call (707) 381-2583.",
+  keywords: [
+    "helicopter tours on oahu",
+    "oahu helicopter tours",
+    "hawaii helicopter tours",
+    "Blue Hawaiian Helicopters",
+    "Rainbow Helicopters",
+    "Oahu helicopter tour booking",
+    "helicopter tour Oahu",
+  ],
+  authors: [{ name: "Helicopter Tours on Oahu", url: "https://www.helicoptertoursonoahu.com" }],
+  creator: "Helicopter Tours on Oahu",
   openGraph: {
-    title: "Helicopter Tours on Oahu - Book Now",
-    description:
-      "Book your Oahu helicopter tour with Blue Hawaiian & Rainbow Helicopters. Safe, scenic, personalized experiences.",
     type: "website",
+    locale: "en_US",
+    url: SITE_URL,
+    siteName: "Helicopter Tours on Oahu",
+    title: "Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online",
+    description:
+      "Book helicopter tours on Oahu with Blue Hawaiian & Rainbow Helicopters. Compare Oahu helicopter tours and book online. Safe, scenic Hawaii helicopter tours.",
+    images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Helicopter Tours on Oahu" }],
   },
-  twitter: {
-    card: "summary_large_image",
-    title: "Helicopter Tours on Oahu - Book Now",
-    description: "Book your Oahu helicopter tour with Blue Hawaiian & Rainbow Helicopters.",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
   },
+  alternates: { canonical: SITE_URL },
+  // Google Search Console: set GOOGLE_SITE_VERIFICATION in Vercel to your verification code (content value only)
+  ...(process.env.GOOGLE_SITE_VERIFICATION && {
+    verification: { google: process.env.GOOGLE_SITE_VERIFICATION },
+  }),
 };
 
 export default function RootLayout({
@@ -35,6 +63,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased bg-gradient-to-br from-blue-50 via-white to-orange-50`}>
+        <JsonLd />
         <Header />
         {children}
         <BookingChatbot />

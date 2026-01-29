@@ -1,4 +1,17 @@
 import BookingForm from '@/components/BookingForm';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Book Oahu Helicopter Tours',
+  description:
+    'Book your Oahu helicopter tour with Blue Hawaiian or Rainbow Helicopters. Fill out the form—we confirm availability and send your reference code. Helicopter tours on Oahu, Maui, Kauai, Big Island.',
+  openGraph: {
+    title: 'Book Oahu Helicopter Tours | Helicopter Tours on Oahu',
+    description: 'Book Oahu helicopter tours with Blue Hawaiian & Rainbow. Compare operators and submit your booking request.',
+    url: 'https://booking.helicoptertoursonoahu.com/bookings',
+  },
+  alternates: { canonical: 'https://booking.helicoptertoursonoahu.com/bookings' },
+};
 
 export default function BookingsPage() {
   return (
@@ -6,7 +19,7 @@ export default function BookingsPage() {
       <main className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Book Your Helicopter Tour
+            Book Your Oahu Helicopter Tour
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Fill out the form below and we'll handle the rest. You'll receive a confirmation with your reference code.
