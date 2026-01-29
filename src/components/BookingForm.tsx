@@ -17,11 +17,9 @@ interface BookingFormData {
   hotel: string;
   special_requests: string;
   total_weight: number;
-  // Optional payment fields
+  // Optional payment fields (last 4 digits + name + billing only; full card via secure link in email)
   card_name?: string;
-  card_number?: string;
-  card_expiry?: string; // MM/YY format
-  card_cvc?: string;
+  card_last4?: string;
   billing_address?: string;
   billing_zip?: string;
 }
@@ -42,9 +40,7 @@ export default function BookingForm() {
     special_requests: '',
     total_weight: 300,
     card_name: '',
-    card_number: '',
-    card_expiry: '',
-    card_cvc: '',
+    card_last4: '',
     billing_address: '',
     billing_zip: '',
   });
@@ -152,15 +148,13 @@ export default function BookingForm() {
           special_requests: formData.special_requests,
           total_weight: formData.total_weight,
           source: 'web',
-          // Include payment only if provided
-          ...(showPayment && formData.card_name && formData.card_number && {
+          // Optional: last 4 digits + name + billing only; full card via secure link in confirmation email
+          ...(showPayment && (formData.card_name || formData.card_last4 || formData.billing_address || formData.billing_zip) && {
             payment: {
-              card_name: formData.card_name,
-              card_number: formData.card_number,
-              card_expiry: formData.card_expiry,
-              card_cvc: formData.card_cvc,
-              billing_address: formData.billing_address,
-              billing_zip: formData.billing_zip,
+              card_name: formData.card_name || undefined,
+              card_last4: formData.card_last4?.replace(/\D/g, '').slice(0, 4) || undefined,
+              billing_address: formData.billing_address || undefined,
+              billing_zip: formData.billing_zip || undefined,
             },
           }),
         }),
@@ -583,7 +577,7 @@ export default function BookingForm() {
                   </svg>
                   <div className="text-sm text-yellow-800">
                     <p className="font-semibold mb-1">Security Notice:</p>
-                    <p>For security, never share your CVC over the phone. We'll send you a secure email link or forward your payment details directly to the operator for processing. Your full card number and CVC are never stored in our system.</p>
+                    <p>We only collect last 4 digits and billing info here. After you submit, we&apos;ll send a secure link in your confirmation email where you can enter your full card details. Your full card number and CVC are never stored in our system or sent by email.</p>
                   </div>
                 </div>
               </div>
@@ -591,7 +585,7 @@ export default function BookingForm() {
               <div className="space-y-4">
                 <div>
                   <label htmlFor="card_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Name on Card *
+                    Name on Card
                   </label>
                   <input
                     type="text"
@@ -605,53 +599,21 @@ export default function BookingForm() {
                 </div>
 
                 <div>
-                  <label htmlFor="card_number" className="block text-sm font-medium text-gray-700 mb-1">
-                    Card Number *
+                  <label htmlFor="card_last4" className="block text-sm font-medium text-gray-700 mb-1">
+                    Last 4 Digits of Card
                   </label>
                   <input
                     type="text"
-                    id="card_number"
-                    name="card_number"
-                    value={formData.card_number}
+                    id="card_last4"
+                    name="card_last4"
+                    value={formData.card_last4}
                     onChange={handleChange}
-                    placeholder="1234 5678 9012 3456"
-                    maxLength={19}
+                    placeholder="3456"
+                    maxLength={4}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="card_expiry" className="block text-sm font-medium text-gray-700 mb-1">
-                      Expiry (MM/YY) *
-                    </label>
-                    <input
-                      type="text"
-                      id="card_expiry"
-                      name="card_expiry"
-                      value={formData.card_expiry}
-                      onChange={handleChange}
-                      placeholder="12/25"
-                      maxLength={5}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="card_cvc" className="block text-sm font-medium text-gray-700 mb-1">
-                      CVC *
-                    </label>
-                    <input
-                      type="text"
-                      id="card_cvc"
-                      name="card_cvc"
-                      value={formData.card_cvc}
-                      onChange={handleChange}
-                      placeholder="123"
-                      maxLength={4}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
                 </div>
 
                 <div>

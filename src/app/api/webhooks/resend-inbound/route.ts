@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     const refCode = refCodeMatch ? refCodeMatch[0] : undefined;
     const body = isOperator
       ? { emailContent, fromEmail, subject, refCode }
-      : { emailContent, fromEmail, subject };
+      : { emailContent, fromEmail, subject, refCode };
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;

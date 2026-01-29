@@ -186,8 +186,20 @@ export async function sendBookingRequestToOperator({
   refCode?: string;
   tourName?: string;
   totalPrice?: number;
+  /** When set (e.g. Rainbow), add prominent line: client has confirmed this time, good to go. */
+  customerConfirmedTime?: string;
+  /** When set, email says "Payment details: view once (secure): [link]" instead of including card in body. */
+  operatorPaymentLink?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const subject = `New Helicopter Tour Booking Request${refCode ? ` - ${refCode}` : ''} - ${bookingDetails.customerName}`;
+
+  const confirmedBanner =
+    customerConfirmedTime
+      ? {
+          text: `\n✅ CLIENT HAS CONFIRMED THIS TIME: ${customerConfirmedTime}. They are good to go. Full details below.\n\n`,
+          html: `<p style="background:#dcfce7;border:2px solid #22c55e;padding:12px;margin:0 0 16px 0;border-radius:6px;"><strong>✅ CLIENT HAS CONFIRMED THIS TIME: ${customerConfirmedTime}.</strong> They are good to go. Full details below.</p>`,
+        }
+      : { text: '', html: '' };
 
   // Build availability section
   let availabilityText = '';
@@ -212,10 +224,19 @@ export async function sendBookingRequestToOperator({
     }
   }
 
-  // Build payment section (SECURE - full details for operator to process)
+  // Build payment section: secure one-time link only (never full card in email)
   let paymentText = '';
   let paymentHtml = '';
-  if (paymentDetails) {
+  if (operatorPaymentLink) {
+    paymentText = `\n\n⚠️ PAYMENT DETAILS – VIEW ONCE (SECURE)\n\nCustomer has provided payment. View details once at this link (do not share):\n${operatorPaymentLink}\n\nAfter viewing, the link cannot be used again. Please call customer at ${bookingDetails.customerPhone} to confirm before charging.\n`;
+    paymentHtml = `
+      <div style="background-color: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
+        <h3 style="color: #856404; margin-top: 0;">⚠️ PAYMENT DETAILS – VIEW ONCE (SECURE)</h3>
+        <p>Customer has provided payment. <strong><a href="${operatorPaymentLink}">View details once here</a></strong> (do not share this link).</p>
+        <p style="color: #856404; font-weight: bold; margin-top: 15px;">After viewing, the link cannot be used again. Please call customer at ${bookingDetails.customerPhone} to confirm before charging.</p>
+      </div>
+    `;
+  } else if (paymentDetails) {
     paymentText = `\n\n⚠️ PAYMENT INFORMATION PROVIDED - PROCESS IMMEDIATELY ⚠️\n\nCard Name: ${paymentDetails.card_name}\nCard Number: ${paymentDetails.card_number}\nExpiry: ${paymentDetails.card_expiry}\nCVC: ${paymentDetails.card_cvc}\nBilling Address: ${paymentDetails.billing_address || 'Not provided'}\nZIP: ${paymentDetails.billing_zip || 'Not provided'}\n\n⚠️ IMPORTANT: Please call customer at ${bookingDetails.customerPhone} to confirm before charging. Never share CVC over phone.\n`;
     paymentHtml = `
       <div style="background-color: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
@@ -233,7 +254,7 @@ export async function sendBookingRequestToOperator({
 
   const text = `
 New Booking Request${refCode ? ` - Reference: ${refCode}` : ''}
-
+${confirmedBanner.text}
 Customer Information:
 - Name: ${bookingDetails.customerName}
 - Email: ${bookingDetails.customerEmail}
@@ -260,7 +281,7 @@ Helicopter Tours on Oahu
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #1a73e8;">New Booking Request${refCode ? ` - ${refCode}` : ''}</h2>
-      
+      ${confirmedBanner.html}
       <h3>Customer Information</h3>
       <ul>
         <li><strong>Name:</strong> ${bookingDetails.customerName}</li>
@@ -426,12 +447,16 @@ export async function sendConfirmationToCustomer({
   confirmationNumber?: string;
   hasPayment?: boolean;
   tourName?: string;
+  /** Secure link for customer to enter full card details (we never store full card or CVC). */
+  securePaymentLink?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const subject = `Your Helicopter Tour Booking${confirmationNumber ? ` - ${confirmationNumber}` : ''}`;
 
-  const paymentNote = hasPayment 
-    ? '\n\nPayment Information: We have received your payment information. The operator will contact you to confirm your booking before processing payment. For security, never share your CVC over the phone.\n'
-    : '\n\nPayment: The operator will contact you with payment instructions once availability is confirmed.\n';
+  const paymentNote = securePaymentLink
+    ? `\n\nPayment: To enter your full payment details securely (we never store your full card number or CVC), use this link:\n${securePaymentLink}\n\nThis link is only sent in this email. Once availability is confirmed, we'll use your details to confirm with the operator.\n`
+    : hasPayment
+      ? '\n\nPayment Information: We have received your payment information. The operator will contact you to confirm your booking before processing payment. For security, never share your CVC over the phone.\n'
+      : '\n\nPayment: The operator will contact you with payment instructions once availability is confirmed.\n';
 
   const text = `
 Dear ${customerName},
@@ -474,7 +499,13 @@ Helicopter Tours on Oahu
         ${bookingDetails.totalAmount ? `<li><strong>Total Amount:</strong> $${bookingDetails.totalAmount.toFixed(2)}</li>` : ''}
       </ul>
       
-      ${hasPayment ? `
+      ${securePaymentLink ? `
+      <div style="background-color: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px; margin: 15px 0;">
+        <p style="margin: 0 0 8px 0; color: #0c5460;"><strong>Payment:</strong> To enter your full payment details securely (we never store your full card number or CVC), use this link:</p>
+        <p style="margin: 0;"><a href="${securePaymentLink}" style="color: #0369a1; font-weight: bold;">Enter payment details securely</a></p>
+        <p style="margin: 8px 0 0 0; font-size: 0.9em; color: #0c5460;">This link is only sent in this email. Once availability is confirmed, we'll use your details to confirm with the operator.</p>
+      </div>
+      ` : hasPayment ? `
       <div style="background-color: #d1ecf1; border-left: 4px solid #0c5460; padding: 12px; margin: 15px 0;">
         <p style="margin: 0; color: #0c5460;"><strong>Payment Information Received:</strong> We have received your payment information. The operator will contact you to confirm your booking before processing payment. For security, never share your CVC over the phone.</p>
       </div>
@@ -573,6 +604,8 @@ export async function sendRainbowFirstFollowUp({
   tourName,
   date,
   phoneNumber,
+  securePaymentLink,
+  hasSecurePayment,
 }: {
   customerEmail: string;
   customerName: string;
@@ -580,6 +613,10 @@ export async function sendRainbowFirstFollowUp({
   tourName: string;
   date: string;
   phoneNumber?: string;
+  /** Secure link for customer to enter full card details (we never store full card or CVC). */
+  securePaymentLink?: string;
+  /** True if customer already submitted payment via secure link. */
+  hasSecurePayment?: boolean;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -589,6 +626,16 @@ export async function sendRainbowFirstFollowUp({
   });
   const phone = phoneNumber || VAPI_PHONE_NUMBER;
   const subject = `Available Tour Times for ${refCode} – We're Contacting Rainbow & Need Your Details`;
+  const paymentBullet = hasSecurePayment
+    ? '• **Payment:** We have your payment information on file. You\'re all set for payment once your time is confirmed.'
+    : securePaymentLink
+      ? `• **Payment:** Please enter your payment details here (we never store your full card number or CVC): ${securePaymentLink} — so we can confirm your booking with Rainbow once we have a time.`
+      : `• If you haven't already, please send us your **payment information** (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. For security, you can also call us at ${phone} to provide payment over the phone.`;
+  const paymentBulletHtml = hasSecurePayment
+    ? '<li><strong>Payment:</strong> We have your payment information on file. You\'re all set for payment once your time is confirmed.</li>'
+    : securePaymentLink
+      ? `<li><strong>Payment:</strong> Please enter your payment details here (we never store your full card number or CVC): <a href="${securePaymentLink}">Enter payment details securely</a> — so we can confirm your booking with Rainbow once we have a time.</li>`
+      : `<li>If you haven't already, please send us your <strong>payment information</strong> (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. For security, you can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to provide payment over the phone.</li>`;
   const text = `
 Dear ${customerName},
 
@@ -598,12 +645,12 @@ We're now in contact with Rainbow Helicopters to get available times closest to 
 
 **We need a few details from you so we can send everything to Rainbow in one go:**
 
-• If you haven't already, please send us your **payment information** (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. For security, you can also call us at ${phone} to provide payment over the phone.
+• ${hasSecurePayment ? 'Payment: We have your payment information on file.' : securePaymentLink ? `Payment: Please enter your payment details here (we never store your full card or CVC): ${securePaymentLink} — so we can confirm with Rainbow once we have a time.` : `If you haven't already, please send us your payment information (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. You can also call us at ${phone}.`}
 • If any of the following were missing from your booking, please send them now: full name, party size, total weight (all guests combined), hotel or pickup location, and any special requests or doors-off preference.
 
 If we already have everything from your booking, you're all set — we'll just need you to confirm your preferred time once Rainbow sends us their available slots.
 
-Reply to this email with your payment info and any missing details, or call us at ${phone}.
+Reply to this email with any missing details, or call us at ${phone}.
 
 Best regards,
 Helicopter Tours on Oahu
@@ -619,12 +666,12 @@ Reference Code: ${refCode}
       <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 16px; margin: 20px 0;">
         <p style="margin: 0 0 12px 0; font-weight: bold;">We need a few details from you so we can send everything to Rainbow in one go:</p>
         <ul style="margin: 0; padding-left: 20px;">
-          <li>If you haven't already, please send us your <strong>payment information</strong> (card name, number, expiry, CVC, billing address). We'll pass it securely to Rainbow once your time is confirmed. For security, you can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to provide payment over the phone.</li>
+          ${paymentBulletHtml}
           <li>If any of the following were missing from your booking, please send them now: full name, party size, total weight (all guests combined), hotel or pickup location, and any special requests or doors-off preference.</li>
         </ul>
         <p style="margin: 12px 0 0 0;">If we already have everything from your booking, you're all set — we'll just need you to confirm your preferred time once Rainbow sends us their available slots.</p>
       </div>
-      <p>Reply to this email with your payment info and any missing details, or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong>.</p>
+      <p>Reply to this email with any missing details, or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong>.</p>
       <p>Best regards,<br>Helicopter Tours on Oahu</p>
       <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
     </div>
@@ -649,6 +696,7 @@ export async function sendRainbowTimesToCustomer({
   date,
   timesList,
   phoneNumber,
+  hasSecurePayment,
 }: {
   customerEmail: string;
   customerName: string;
@@ -656,6 +704,8 @@ export async function sendRainbowTimesToCustomer({
   date: string;
   timesList: string[];
   phoneNumber?: string;
+  /** True if customer already submitted payment via secure link. */
+  hasSecurePayment?: boolean;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -667,6 +717,9 @@ export async function sendRainbowTimesToCustomer({
   const listText = timesList.length ? timesList.map(t => `• ${t}`).join('\n') : '• (times provided by Rainbow)';
   const listHtml = timesList.length ? timesList.map(t => `<li>${t}</li>`).join('') : '<li>(times provided by Rainbow)</li>';
   const subject = `${refCode} – Rainbow Has Times for You – Pick One & Confirm`;
+  const paymentLine = hasSecurePayment
+    ? 'We have your card on file.'
+    : `If you haven't already sent your payment information, please complete the secure payment link we sent you (or reply with your payment info or call us at ${phone}) so we can confirm your booking with Rainbow.`;
   const text = `
 Dear ${customerName},
 
@@ -674,7 +727,7 @@ Rainbow Helicopters has provided the following available times for your tour on 
 
 ${listText}
 
-Please reply to this email with which time works best for you (e.g. "2pm works" or "I'll take 11:30 AM"). If you haven't already sent your payment information, please include it in your reply or call us at ${phone} so we can confirm your booking with Rainbow.
+Please reply to this email with which time works best for you (e.g. "2pm works" or "I'll take 11:30 AM"). ${paymentLine}
 
 Once you confirm your time, we'll notify Rainbow and get your tour locked in.
 
@@ -689,7 +742,7 @@ Reference Code: ${refCode}
       <p>Dear ${customerName},</p>
       <p>Rainbow Helicopters has provided the following available times for your tour on <strong>${formattedDate}</strong>:</p>
       <ul>${listHtml}</ul>
-      <p>Please reply to this email with which time works best for you (e.g. "2pm works" or "I'll take 11:30 AM"). If you haven't already sent your payment information, please include it in your reply or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong> so we can confirm your booking with Rainbow.</p>
+      <p>Please reply to this email with which time works best for you (e.g. "2pm works" or "I'll take 11:30 AM"). ${hasSecurePayment ? 'We have your card on file.' : `If you haven't already sent your payment information, please complete the secure payment link we sent you (or reply with your payment info or call us at <strong><a href="tel:${phone.replace(/\D/g, '')}">${phone}</a></strong>) so we can confirm your booking with Rainbow.`}</p>
       <p>Once you confirm your time, we'll notify Rainbow and get your tour locked in.</p>
       <p>Best regards,<br>Helicopter Tours on Oahu</p>
       <p style="color: #64748b; font-size: 12px;">Reference Code: ${refCode}</p>
@@ -839,6 +892,8 @@ export async function sendBlueHawaiianFirstFollowUp({
   totalPrice,
   availableSlots,
   phoneNumber,
+  securePaymentLink,
+  hasSecurePayment,
 }: {
   customerEmail: string;
   customerName: string;
@@ -849,6 +904,8 @@ export async function sendBlueHawaiianFirstFollowUp({
   totalPrice: number;
   availableSlots: Array<{ time: string; price?: number; available?: boolean }>;
   phoneNumber?: string;
+  securePaymentLink?: string;
+  hasSecurePayment?: boolean;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const formattedDate = new Date(date + 'T12:00:00').toLocaleDateString('en-US', {
     weekday: 'long',
@@ -890,7 +947,7 @@ ${hasSlots ? `**Available times near your preferred window:**\n\n${slotsText}\n\
 **What we need from you:**
 
 1. Reply to this email with your **preferred time** (e.g. "11:30 AM" or "2pm works").
-2. If you haven't already sent your **payment information**, please send it now (card name, number, expiry, CVC, billing address) so we can confirm your booking with Blue Hawaiian. You can also call us at ${phone} to provide payment over the phone.
+2. ${hasSecurePayment ? '**Payment:** We have your payment information on file. You\'re all set.' : securePaymentLink ? `**Payment:** Please enter your payment details here (we never store your full card or CVC): ${securePaymentLink} — so we can confirm your booking with Blue Hawaiian.` : `If you haven't already sent your **payment information**, please send it now (card name, number, expiry, CVC, billing address) so we can confirm your booking with Blue Hawaiian. You can also call us at ${phone} to provide payment over the phone.`}
 3. If we're missing any details (party size, total weight, hotel, special requests), please send those too.
 
 Once you pick a time and we have your payment (or you call us), we'll confirm with Blue Hawaiian and get you locked in.
@@ -914,7 +971,7 @@ Reference Code: ${refCode}
       <h3>What we need from you</h3>
       <ol>
         <li>Reply to this email with your <strong>preferred time</strong> (e.g. "11:30 AM" or "2pm works").</li>
-        <li>If you haven't already sent your <strong>payment information</strong>, please send it now so we can confirm your booking with Blue Hawaiian. You can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to provide payment over the phone.</li>
+        <li>${hasSecurePayment ? '<strong>Payment:</strong> We have your payment information on file. You\'re all set.' : securePaymentLink ? `<strong>Payment:</strong> Please enter your payment details here (we never store your full card or CVC): <a href="${securePaymentLink}">Enter payment details securely</a> — so we can confirm your booking with Blue Hawaiian.` : `If you haven't already sent your <strong>payment information</strong>, please send it now so we can confirm your booking with Blue Hawaiian. You can also call us at <a href="tel:${phone.replace(/\D/g, '')}">${phone}</a> to provide payment over the phone.`}</li>
         <li>If we're missing any details (party size, total weight, hotel, special requests), please send those too.</li>
       </ol>
       <p>Once you pick a time and we have your payment (or you call us), we'll confirm with Blue Hawaiian and get you locked in.</p>

@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { supabase, insertBooking, updateBooking, type InsertBookingResult } from '@/lib/supabaseClient';
+import { supabase, insertBooking, updateBooking, getBookingByRefCode, type InsertBookingResult } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
-import { bookingStatuses, operators } from '@/lib/constants';
+import { bookingStatuses, operators, VAPI_PHONE_NUMBER } from '@/lib/constants';
 import { analyzeEmail, analyzeCustomerAvailabilityReply } from '@/lib/openai';
-import { sendEmail, sendBookingRequestToOperator } from '@/lib/email';
+import { sendEmail, sendBookingRequestToOperator, sendRainbowFinalConfirmation } from '@/lib/email';
+import type { RainbowIsland } from '@/lib/email';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
+import { generateOperatorToken } from '@/lib/securePayment';
 
 const customerReplySchema = z.object({
   emailContent: z.string(),
   fromEmail: z.string().email(),
   subject: z.string().optional(),
+  refCode: z.string().optional(),
 });
 
 /**
@@ -42,15 +45,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { data: rows, error: queryError } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('customer_email', validated.fromEmail)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const bookings: BookingsRow[] | null = (rows as BookingsRow[] | null) ?? null;
-    if (queryError || !bookings || bookings.length === 0) {
+    let booking: BookingsRow | null = null;
+    if (validated.refCode) {
+      const refResult = await getBookingByRefCode(validated.refCode);
+      if (refResult.data && refResult.data.customer_email?.toLowerCase() === validated.fromEmail.toLowerCase()) {
+        booking = refResult.data;
+      }
+    }
+    if (!booking) {
+      const { data: rows, error: queryError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('customer_email', validated.fromEmail)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const bookings: BookingsRow[] | null = (rows as BookingsRow[] | null) ?? null;
+      if (!queryError && bookings && bookings.length > 0) booking = bookings[0];
+    }
+    if (!booking) {
       if (analysis.isBookingRequest && analysis.extractedData) {
         const insertData: BookingsInsert = {
           status: bookingStatuses.COLLECTING_INFO,
@@ -95,14 +107,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const booking: BookingsRow = bookings[0];
-    if (!booking) {
-      return NextResponse.json(
-        { success: false, error: 'Booking not found' },
-        { status: 404 }
-      );
-    }
-
+    let sentFinalConfirmation = false;
     const prevMeta = (booking?.metadata ?? {}) as Record<string, unknown>;
     const prevMessages = Array.isArray(prevMeta.customerMessages)
       ? prevMeta.customerMessages
@@ -152,9 +157,34 @@ export async function POST(request: NextRequest) {
         const tour = tourId ? getTourById(tourId) : undefined;
         const tourName = (prevMeta.tour_name as string) || tour?.name || 'Helicopter Tour';
         const totalPrice = tour ? calculateTotalPrice(tour.id, booking.party_size || 2) : undefined;
-        const confirmedTime = opKey === 'blueHawaiian' ? availabilityReply.chosenTimeSlot : operatorProposedTime;
+        const confirmedTime =
+          opKey === 'blueHawaiian'
+            ? availabilityReply.chosenTimeSlot
+            : (availabilityReply.chosenTimeSlot || operatorProposedTime);
 
         try {
+          let operatorPaymentLink: string | undefined;
+          const refCode = booking.ref_code || '';
+          if (refCode) {
+            const { data: paymentRow } = await supabase
+              .from('secure_payments')
+              .select('id')
+              .eq('ref_code', refCode)
+              .is('consumed_at', null)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            const row = paymentRow as { id?: string } | null;
+            if (row?.id) {
+              const operatorToken = generateOperatorToken();
+              await supabase
+                .from('secure_payments')
+                .update({ operator_token: operatorToken } as never)
+                .eq('id', row.id);
+              const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_APP_URL || 'https://booking.helicoptertoursonoahu.com';
+              operatorPaymentLink = `${baseUrl.replace(/\/$/, '')}/api/operator-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(operatorToken)}`;
+            }
+          }
           const sendResult = await sendBookingRequestToOperator({
             operatorEmail: operator.email,
             operatorName: operator.name,
@@ -185,11 +215,36 @@ export async function POST(request: NextRequest) {
             refCode: booking.ref_code || undefined,
             tourName,
             totalPrice,
+            customerConfirmedTime: opKey === 'rainbow' ? confirmedTime : undefined,
+            operatorPaymentLink,
           });
           if (sendResult.success) {
             (updateData.metadata as Record<string, unknown>).operator_email_sent_at = new Date().toISOString();
             (updateData.metadata as Record<string, unknown>).confirmed_time = confirmedTime;
             console.log('Full booking sent to operator after customer confirmed time:', operator.email);
+
+            // Rainbow: send final confirmation to customer (location, when to show up, tour details) immediately
+            if (opKey === 'rainbow' && confirmedTime) {
+              const islandRaw = ((prevMeta.island as string) ?? 'oahu').toString().toLowerCase();
+              const island: RainbowIsland =
+                islandRaw === 'big_island' || islandRaw === 'big island' ? 'big_island' : 'oahu';
+              const finalResult = await sendRainbowFinalConfirmation({
+                customerEmail: booking.customer_email || validated.fromEmail,
+                customerName: booking.customer_name || 'Valued Customer',
+                refCode: booking.ref_code || '',
+                tourName,
+                date: booking.preferred_date || '',
+                confirmedTime,
+                island,
+                phoneNumber: VAPI_PHONE_NUMBER,
+              });
+              if (finalResult.success) {
+                sentFinalConfirmation = true;
+                console.log('Rainbow final confirmation sent to customer:', booking.customer_email);
+              } else {
+                console.error('Rainbow final confirmation failed:', finalResult.error);
+              }
+            }
           } else {
             console.error('Failed to send booking to operator:', sendResult.error);
           }
@@ -205,11 +260,13 @@ export async function POST(request: NextRequest) {
       console.error('Error updating booking:', updateError);
     }
 
-    await sendEmail({
-      to: validated.fromEmail,
-      subject: 'Re: ' + (validated.subject ?? 'Your booking'),
-      text: "Thank you for your message. We've updated your booking and will get back to you shortly.\n\nBest regards,\nHelicopter Tours on Oahu",
-    });
+    if (!sentFinalConfirmation) {
+      await sendEmail({
+        to: validated.fromEmail,
+        subject: 'Re: ' + (validated.subject ?? 'Your booking'),
+        text: "Thank you for your message. We've updated your booking and will get back to you shortly.\n\nBest regards,\nHelicopter Tours on Oahu",
+      });
+    }
 
     if (process.env.N8N_WEBHOOK_URL) {
       try {

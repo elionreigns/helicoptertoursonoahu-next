@@ -151,6 +151,7 @@ export async function POST(request: NextRequest) {
       };
 
       if (booking.customer_email && booking.customer_name) {
+        const hasSecurePayment = !!(prevMeta.secure_payment_received_at as string | undefined);
         const timesResult = await sendRainbowTimesToCustomer({
           customerEmail: booking.customer_email,
           customerName: booking.customer_name,
@@ -158,6 +159,7 @@ export async function POST(request: NextRequest) {
           date: booking.preferred_date || '',
           timesList,
           phoneNumber: VAPI_PHONE_NUMBER,
+          hasSecurePayment,
         });
         if (timesResult.success) {
           console.log('Rainbow times email sent to customer:', booking.customer_email);

@@ -66,6 +66,14 @@ When `RESEND_API_KEY` is set, the app uses Resend for all outgoing email and **d
 
 ---
 
+## 5. Node deprecation: "url.parse() … Use the WHATWG URL API instead" (DEP0169)
+
+**What it means:** Some code (often a dependency like Next.js or a library) is using Node’s legacy `url.parse()`, which is deprecated. The warning appears in logs but does not break the app.
+
+**Fix:** The warning comes from a dependency, not from this project’s source. To find the exact file, run with `NODE_OPTIONS=--trace-deprecation`. To hide the warning in production you can set `NODE_OPTIONS=--no-deprecation` in Vercel (not recommended if you want to see other deprecations). No change is required for correct behavior.
+
+---
+
 ## Quick checklist
 
 | Issue | Action |
@@ -74,3 +82,4 @@ When `RESEND_API_KEY` is set, the app uses Resend for all outgoing email and **d
 | 429 Resend | Delays are in place; if it persists, contact Resend or increase spacing. |
 | Inbound 401 (restricted key) | Use a Resend API key with **Receiving** scope (or full access). |
 | Browserbase script failed | Verify **BROWSERBASE_API_KEY** / **BROWSERBASE_PROJECT_ID**; check session in Browserbase; confirm FareHarbor page/selectors. |
+| url.parse deprecation (DEP0169) | From a dependency; safe to ignore or set NODE_OPTIONS=--trace-deprecation to find source. |

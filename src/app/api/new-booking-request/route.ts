@@ -3,7 +3,8 @@ import { z } from 'zod';
 import { insertBooking } from '@/lib/supabaseClient';
 import type { BookingsInsert } from '@/lib/database.types';
 import { operators } from '@/lib/constants'; // Import operators for operator selection
-import { sendBookingRequestToOperator, sendConfirmationToCustomer, sendRainbowAvailabilityInquiry } from '@/lib/email';
+import { generateCustomerToken } from '@/lib/securePayment';
+import { sendConfirmationToCustomer, sendRainbowAvailabilityInquiry } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 
@@ -47,12 +48,10 @@ const bookingRequestSchema = z.object({
   special_requests: z.string().optional(),
   total_weight: z.number().int().positive().min(100, 'Total weight must be at least 100 lbs'),
   source: z.enum(['web', 'chatbot', 'phone']).default('web'),
-  // Optional payment information (will be forwarded to operator, not stored)
+  // Optional: last 4 digits + name + billing only; full card via secure link in confirmation email
   payment: z.object({
-    card_name: z.string(),
-    card_number: z.string(),
-    card_expiry: z.string(),
-    card_cvc: z.string(),
+    card_name: z.string().optional(),
+    card_last4: z.string().max(4).optional(),
     billing_address: z.string().optional(),
     billing_zip: z.string().optional(),
   }).optional(),
@@ -140,36 +139,19 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    // Handle payment information securely
-    // Extract last 4 digits only for storage, forward full details to operator
-    let paymentMetadata: any = null;
-    let paymentDetailsForOperator: any = null;
+    // Optional payment: last 4 + name + billing only on form; full card via secure link in email
+    let paymentMetadata: Record<string, unknown> | null = null;
     
-    if (validated.payment) {
-      const cardNumber = validated.payment.card_number.replace(/\s/g, '');
-      const last4 = cardNumber.slice(-4);
-      
-      // Store only last4 in metadata (for reference)
+    if (validated.payment && (validated.payment.card_name || validated.payment.card_last4 || validated.payment.billing_address || validated.payment.billing_zip)) {
+      const last4 = (validated.payment.card_last4 ?? '').replace(/\D/g, '').slice(0, 4);
       paymentMetadata = {
-        card_name: validated.payment.card_name,
-        card_last4: last4,
-        card_expiry: validated.payment.card_expiry,
-        billing_address: validated.payment.billing_address,
-        billing_zip: validated.payment.billing_zip,
-        has_payment: true,
+        card_name: validated.payment.card_name ?? null,
+        card_last4: last4 || null,
+        billing_address: validated.payment.billing_address ?? null,
+        billing_zip: validated.payment.billing_zip ?? null,
+        has_payment_partial: true, // full card via secure link when customer uses it
       };
-      
-      // Full payment details for operator (will be sent via email, not stored)
-      paymentDetailsForOperator = {
-        card_name: validated.payment.card_name,
-        card_number: validated.payment.card_number,
-        card_expiry: validated.payment.card_expiry,
-        card_cvc: validated.payment.card_cvc,
-        billing_address: validated.payment.billing_address,
-        billing_zip: validated.payment.billing_zip,
-      };
-      
-      console.log('Payment information provided - will forward to operator securely');
+      console.log('Partial payment info provided (last4/name/billing) - secure link sent in confirmation email for full details');
     }
 
     // Insert booking into Supabase (typed client; no casts)
@@ -262,12 +244,19 @@ export async function POST(request: NextRequest) {
       if (operatorKey === 'blueHawaiian') {
         console.log('Blue Hawaiian: operator will be emailed when customer confirms a time slot');
       }
-      paymentDetailsForOperator = null;
     } catch (error) {
       console.error('Error sending operator email:', error);
     }
 
-    // Send confirmation email to customer
+    // Send confirmation email to customer (include secure payment link so they can enter full card details)
+    let securePaymentLink: string | undefined;
+    try {
+      securePaymentLink = process.env.PAYMENT_LINK_SECRET
+        ? `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_APP_URL || 'https://booking.helicoptertoursonoahu.com'}`.replace(/\/$/, '') + `/secure-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(generateCustomerToken(refCode))}`
+        : undefined;
+    } catch {
+      // PAYMENT_LINK_SECRET not set; no secure link
+    }
     try {
       const confirmResult = await sendConfirmationToCustomer({
         customerEmail: validated.email,
@@ -281,6 +270,7 @@ export async function POST(request: NextRequest) {
         confirmationNumber: refCode,
         hasPayment: !!validated.payment,
         tourName: tourName,
+        securePaymentLink,
       });
       if (confirmResult.success) {
         console.log('Confirmation email sent to customer:', validated.email);

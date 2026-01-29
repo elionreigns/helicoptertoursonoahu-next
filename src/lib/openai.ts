@@ -178,8 +178,8 @@ export async function analyzeCustomerAvailabilityReply(content: string): Promise
         {
           role: 'system',
           content: `You are analyzing a customer's email reply after they received availability options for a helicopter tour.
-1. If the customer is choosing or confirming a specific time slot (e.g. "2pm works", "I'll take the morning slot", "the 10am one"), set chosenTimeSlot to that time (e.g. "2:00 PM", "10:00 AM", "morning slot").
-2. If the customer is confirming a proposed time (e.g. "yes", "that works", "confirmed", "sounds good"), set confirmsProposedTime to true.
+1. If the customer is choosing or confirming a specific time slot (e.g. "2pm works", "5 pm works great for me", "I'll take the morning slot", "the 10am one", "5pm works"), set chosenTimeSlot to that time in a short form (e.g. "2:00 PM", "5:00 PM", "10:00 AM", "morning slot"). Also set confirmsProposedTime to true when they are clearly saying yes to a time.
+2. If the customer is confirming a proposed time (e.g. "yes", "that works", "confirmed", "sounds good", "5 pm works great", "perfect", "let's do it"), set confirmsProposedTime to true. If they mention a time (e.g. 5pm), also set chosenTimeSlot to that time.
 
 Return JSON only:
 {
