@@ -57,6 +57,7 @@ export async function checkAvailabilityBrowserbase({
   }
 
   // For Blue Hawaiian, scrape FareHarbor calendar
+  let sessionId: string | undefined;
   try {
     // Get FareHarbor URL for the tour (if tourName provided)
     let fareHarborUrl: string | null = null;
@@ -85,7 +86,6 @@ export async function checkAvailabilityBrowserbase({
 
     console.log(`Checking availability on FareHarbor: ${fareHarborUrl}`);
 
-    let sessionId: string | undefined;
     // Create session and connect via Browserbase SDK (required for real scraping)
     const bb = new Browserbase({ apiKey: browserbaseApiKey });
     const session = await bb.sessions.create({
