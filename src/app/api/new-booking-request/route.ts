@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger availability check and follow-up email in background (don't wait)
-    // Vercel Deployment Protection: set VERCEL_AUTOMATION_BYPASS_SECRET in Vercel → Project → Settings → Deployment Protection → Protection Bypass for Automation (or add env var manually)
+    // Vercel Deployment Protection: VERCEL_AUTOMATION_BYPASS_SECRET (set in Vercel env vars) is sent so this server-to-server call succeeds
     const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (bypassSecret) {
