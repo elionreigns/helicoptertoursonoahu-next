@@ -213,8 +213,8 @@ The **Rainbow “proposed time”** branch (step 4) is evaluated first when the 
 
 **Follow-up API (avoid 401):**
 
-- **Vercel Deployment Protection:** If enabled, enable **Protection Bypass for Automation** in the project (Settings → Deployment Protection). Vercel then sets `VERCEL_AUTOMATION_BYPASS_SECRET` automatically. The app uses it to call `/api/check-availability-and-followup` from the server.
-- Or set **`VERCEL_AUTOMATION_BYPASS_SECRET`** manually in Vercel env vars to the bypass token value (keep secret; do not commit).
+- **Vercel Deployment Protection:** If you see "Availability check API returned 401", set **`VERCEL_AUTOMATION_BYPASS_SECRET`** in Vercel: **Project → Settings → Deployment Protection → Protection Bypass for Automation** — create a secret (or copy the generated one), then **Environment Variables** → add `VERCEL_AUTOMATION_BYPASS_SECRET` with that value for Production (and Preview if you test preview URLs). The app sends this as a header (and retries with query param on 401) so the server-to-server call to `/api/check-availability-and-followup` succeeds.
+- Optional: set **`NEXT_PUBLIC_APP_URL`** = `https://booking.helicoptertoursonoahu.com` so the availability check is triggered against production instead of the preview URL.
 
 **Optional:**
 

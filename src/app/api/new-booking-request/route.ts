@@ -312,77 +312,70 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger availability check and follow-up email in background (don't wait)
-    // This runs asynchronously so the booking response is fast
-    // Try multiple URL sources to ensure it works
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL 
-      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
-      || 'https://booking.helicoptertoursonoahu.com';
-    
-    const availabilityCheckUrl = `${appUrl}/api/check-availability-and-followup`;
-    // Vercel Deployment Protection: bypass so server-to-server call reaches the API
-    const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+    // Vercel Deployment Protection: set VERCEL_AUTOMATION_BYPASS_SECRET in Vercel → Project → Settings → Deployment Protection → Protection Bypass for Automation (or add env var manually)
+    const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (bypassSecret) {
       headers['x-vercel-protection-bypass'] = bypassSecret;
     } else if (process.env.VERCEL) {
-      console.warn('VERCEL_AUTOMATION_BYPASS_SECRET not set; follow-up API may return 401 if Deployment Protection is on. Enable Protection Bypass for Automation in Vercel project settings.');
+      console.warn('VERCEL_AUTOMATION_BYPASS_SECRET not set — follow-up will get 401. In Vercel: Settings → Deployment Protection → Protection Bypass for Automation, then add env var or use generated secret.');
     }
 
+    const productionUrl = 'https://booking.helicoptertoursonoahu.com/api/check-availability-and-followup';
+    // Prefer production URL so we hit the same domain; preview URLs often have protection
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim()
+      || (process.env.VERCEL_URL && process.env.VERCEL_ENV === 'production' ? `https://${process.env.VERCEL_URL}` : null)
+      || 'https://booking.helicoptertoursonoahu.com';
+    const availabilityCheckUrl = `${appUrl.replace(/\/$/, '')}/api/check-availability-and-followup`;
+
     console.log(`Triggering availability check for ${refCode} via ${availabilityCheckUrl}`);
-    
-    // Use a more robust fetch with timeout and retry logic
-    const triggerAvailabilityCheck = async (url: string, retries = 2): Promise<void> => {
+
+    const triggerAvailabilityCheck = async (url: string, useQueryBypass = false, retries = 2): Promise<void> => {
       try {
+        const finalUrl = useQueryBypass && bypassSecret
+          ? `${url}${url.includes('?') ? '&' : '?'}x-vercel-protection-bypass=${encodeURIComponent(bypassSecret)}`
+          : url;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
-        const response = await fetch(url, {
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(finalUrl, {
           method: 'POST',
-          headers,
+          headers: useQueryBypass ? { 'Content-Type': 'application/json' } : headers,
           body: JSON.stringify({ refCode }),
           signal: controller.signal,
         });
-        
+
         clearTimeout(timeoutId);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`Availability check API returned ${response.status}:`, errorText);
-          
-          // If 401 or 404, try alternative URL
-          if ((response.status === 401 || response.status === 404) && retries > 0) {
-            const altUrl = 'https://booking.helicoptertoursonoahu.com/api/check-availability-and-followup';
-            if (url !== altUrl) {
-              console.log(`Retrying with alternative URL: ${altUrl}`);
-              return triggerAvailabilityCheck(altUrl, retries - 1);
-            }
+          console.error(`Availability check API returned ${response.status}:`, errorText.slice(0, 200));
+          // On 401: retry with bypass as query param (Vercel supports both header and query)
+          if (response.status === 401 && bypassSecret && !useQueryBypass && retries > 0) {
+            console.log('Retrying with bypass as query parameter...');
+            return triggerAvailabilityCheck(url, true, retries - 1);
           }
-        } else {
-          const result = await response.json();
-          console.log('Availability check triggered successfully:', result);
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') {
-          console.error('Availability check request timed out');
-        } else {
-          console.error('Failed to trigger availability check:', err);
-        }
-        
-        // Retry with alternative URL if we have retries left
-        if (retries > 0) {
-          const altUrl = 'https://booking.helicoptertoursonoahu.com/api/check-availability-and-followup';
-          if (url !== altUrl) {
-            console.log(`Retrying with alternative URL: ${altUrl}`);
-            return triggerAvailabilityCheck(altUrl, retries - 1);
+          // Try production URL if current URL failed
+          if ((response.status === 401 || response.status === 404) && retries > 0 && url !== productionUrl) {
+            console.log(`Retrying with production URL: ${productionUrl}`);
+            return triggerAvailabilityCheck(productionUrl, false, retries - 1);
           }
+          return;
+        }
+        const result = await response.json();
+        console.log('Availability check triggered successfully:', result);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('Availability check request failed:', message);
+        if (retries > 0 && url !== productionUrl) {
+          console.log(`Retrying with production URL: ${productionUrl}`);
+          return triggerAvailabilityCheck(productionUrl, false, retries - 1);
         }
       }
     };
-    
-    // Trigger in background (fire and forget, but with error handling)
-    triggerAvailabilityCheck(availabilityCheckUrl).catch(err => {
+
+    triggerAvailabilityCheck(availabilityCheckUrl).catch((err) => {
       console.error('Background availability check failed after retries:', err);
-      // Don't fail the booking - the follow-up email can be sent manually if needed
     });
 
     return NextResponse.json({
