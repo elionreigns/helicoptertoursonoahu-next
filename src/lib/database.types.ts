@@ -121,6 +121,32 @@ export interface Database {
           source?: string | null;
         };
       };
+      secure_payments: {
+        Row: {
+          id: string;
+          ref_code: string;
+          encrypted_payload: string;
+          created_at: string;
+          consumed_at: string | null;
+          operator_token: string | null;
+        };
+        Insert: {
+          id?: string;
+          ref_code: string;
+          encrypted_payload: string;
+          created_at?: string;
+          consumed_at?: string | null;
+          operator_token?: string | null;
+        };
+        Update: {
+          id?: string;
+          ref_code?: string;
+          encrypted_payload?: string;
+          created_at?: string;
+          consumed_at?: string | null;
+          operator_token?: string | null;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
 
     await supabase
       .from('secure_payments')
-      .update({ consumed_at: new Date().toISOString() } as never)
+      .update({ consumed_at: new Date().toISOString() })
       .eq('ref_code', ref)
       .eq('operator_token', token);
 
