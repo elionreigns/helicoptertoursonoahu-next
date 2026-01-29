@@ -100,40 +100,40 @@ export default function Home() {
           </div>
 
           <div className="max-w-5xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200">
-            <div className="overflow-x-auto -mx-4 sm:mx-0">
-              <table className="w-full min-w-[320px]">
+            <div className="overflow-x-auto px-4 sm:px-6 py-1">
+              <table className="w-full min-w-[280px]">
                 <thead>
                   <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
-                    <th className="px-4 sm:px-6 py-4 text-left font-semibold text-sm sm:text-base">Feature</th>
-                    <th className="px-4 sm:px-6 py-4 text-center font-semibold text-sm sm:text-base">Blue Hawaiian</th>
-                    <th className="px-4 sm:px-6 py-4 text-center font-semibold text-sm sm:text-base">Rainbow Helicopters</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-left font-semibold text-sm sm:text-base">Feature</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-semibold text-sm sm:text-base">Blue Hawaiian</th>
+                    <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-semibold text-sm sm:text-base">Rainbow Helicopters</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 text-sm sm:text-base">Experience</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Premium tours, luxury helicopters</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Adventure-focused, doors-off options</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Experience</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Premium tours, luxury helicopters</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Adventure-focused, doors-off options</td>
                   </tr>
                   <tr className="hover:bg-gray-50 transition-colors bg-gray-50/50">
-                    <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 text-sm sm:text-base">Tour Types</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Oahu, Big Island, Maui, Kauai, Lanai</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Oahu & Big Island</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Tour Types</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Oahu, Big Island, Maui, Kauai, Lanai</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Oahu & Big Island</td>
                   </tr>
                   <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 text-sm sm:text-base">Doors-Off</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Limited</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">✓ Multiple doors-off tours</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Doors-Off</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Limited options</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Multiple doors-off tours</td>
                   </tr>
                   <tr className="hover:bg-gray-50 transition-colors bg-gray-50/50">
-                    <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 text-sm sm:text-base">Price Range</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">$200 – $500+</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">$200 – $400+</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Price Range</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">$200 – $500+</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">$200 – $400+</td>
                   </tr>
                   <tr className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 sm:px-6 py-4 font-medium text-gray-900 text-sm sm:text-base">Best For</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Luxury, multi-island</td>
-                    <td className="px-4 sm:px-6 py-4 text-center text-gray-700 text-sm sm:text-base">Adventure, photography</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Best For</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Luxury, multi-island</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Adventure & photography</td>
                   </tr>
                 </tbody>
               </table>
