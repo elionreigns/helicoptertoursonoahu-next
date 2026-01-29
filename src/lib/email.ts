@@ -436,6 +436,7 @@ export async function sendConfirmationToCustomer({
   confirmationNumber,
   hasPayment,
   tourName,
+  securePaymentLink,
 }: {
   customerEmail: string;
   customerName: string;
