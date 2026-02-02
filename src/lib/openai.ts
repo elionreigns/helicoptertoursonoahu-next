@@ -2,12 +2,14 @@ import 'server-only';
 import OpenAI from 'openai';
 import { emails } from './constants';
 
-/**
- * OpenAI client for parsing emails and spam detection
- */
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+/** Lazy client so build doesn't require OPENAI_API_KEY (only needed at runtime when API is called). */
+function getOpenAI(): OpenAI {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) {
+    throw new Error('The OPENAI_API_KEY environment variable is missing or empty; either provide it, or instantiate the OpenAI client with an apiKey option, like new OpenAI({ apiKey: \'My API Key\' }).');
+  }
+  return new OpenAI({ apiKey: key });
+}
 
 /**
  * Spam detection: Classify incoming emails to bookings@ as spam or real booking inquiry
@@ -21,7 +23,7 @@ export async function detectSpam(emailContent: string, fromEmail?: string, subje
   reason?: string;
 }> {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -110,7 +112,7 @@ export async function analyzeEmail(content: string, fromEmail?: string, subject?
     }
 
     // Then analyze for booking intent
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -172,7 +174,7 @@ export async function analyzeCustomerAvailabilityReply(content: string): Promise
   confirmsProposedTime?: boolean;  // true if customer says yes/confirmed (Rainbow)
 }> {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -219,7 +221,7 @@ export async function parseOperatorReply(content: string): Promise<{
   notes?: string;
 }> {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -322,7 +324,7 @@ export async function extractBookingFromCallTranscript(transcript: string, calle
     }
 
     // Extract booking information from transcript
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
