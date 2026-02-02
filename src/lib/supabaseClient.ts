@@ -1,5 +1,5 @@
 import 'server-only';
-import { createClient, type PostgrestError } from '@supabase/supabase-js';
+import { createClient, type PostgrestError, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 import type { BookingsInsert, BookingsUpdate, BookingsRow } from './database.types';
 
@@ -13,21 +13,31 @@ import type { BookingsInsert, BookingsUpdate, BookingsRow } from './database.typ
  * 2. Create policies that restrict access appropriately
  * 3. Consider using anon key for client-side operations where possible
  * 4. Service role key should only be used server-side (API routes)
+ *
+ * Lazy init: client is created on first use so the build does not require env vars.
  */
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+let cached: SupabaseClient<Database> | null = null;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
+function getSupabase(): SupabaseClient<Database> {
+  if (cached) return cached;
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Missing Supabase environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required');
+  }
+  cached = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+  return cached;
 }
 
-// Admin client for server-side operations (uses service role key)
-// This client has full access to the database and is used for API routes
-// IMPORTANT: RLS should be enabled in Supabase for production security
-export const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false,
+/** Lazy Supabase client — only connects at runtime, so build does not need env vars. */
+export const supabase = new Proxy({} as SupabaseClient<Database>, {
+  get(_, prop) {
+    return (getSupabase() as Record<string, unknown>)[prop as string];
   },
 });
 
@@ -40,7 +50,7 @@ export type InsertBookingResult = { data: BookingsRow | null; error: PostgrestEr
  */
 export async function insertBooking(data: BookingsInsert): Promise<InsertBookingResult> {
   // Supabase client infers insert param as 'never'; assertion here keeps route code cast-free.
-  const result = await supabase.from('bookings').insert(data as never).select().single();
+  const result = await getSupabase().from('bookings').insert(data as never).select().single();
   return result as InsertBookingResult;
 }
 
@@ -49,14 +59,14 @@ export async function insertBooking(data: BookingsInsert): Promise<InsertBooking
  * Use this instead of supabase.from('bookings').update(...) in API routes.
  */
 export async function updateBooking(id: string, data: BookingsUpdate) {
-  return supabase.from('bookings').update(data as never).eq('id', id);
+  return getSupabase().from('bookings').update(data as never).eq('id', id);
 }
 
 /**
  * Get booking by reference code
  */
 export async function getBookingByRefCode(refCode: string): Promise<{ data: BookingsRow | null; error: PostgrestError | null }> {
-  const result = await supabase
+  const result = await getSupabase()
     .from('bookings')
     .select('*')
     .eq('ref_code', refCode)
