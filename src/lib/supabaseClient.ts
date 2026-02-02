@@ -37,7 +37,7 @@ function getSupabase(): SupabaseClient<Database> {
 /** Lazy Supabase client — only connects at runtime, so build does not need env vars. */
 export const supabase = new Proxy({} as SupabaseClient<Database>, {
   get(_, prop) {
-    return (getSupabase() as Record<string, unknown>)[prop as string];
+    return (getSupabase() as unknown as Record<string, unknown>)[prop as string];
   },
 });
 
