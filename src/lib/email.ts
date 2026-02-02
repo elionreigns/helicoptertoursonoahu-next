@@ -230,12 +230,15 @@ export async function sendBookingRequestToOperator({
   let paymentText = '';
   let paymentHtml = '';
   if (operatorPaymentLink) {
-    paymentText = `\n\n⚠️ PAYMENT DETAILS – VIEW ONCE (SECURE)\n\nCustomer has provided payment. View details once at this link (do not share):\n${operatorPaymentLink}\n\nAfter viewing, the link cannot be used again. Please call customer at ${bookingDetails.customerPhone} to confirm before charging.\n`;
+    const reservationsUrl = 'https://booking.helicoptertoursonoahu.com/reservations';
+    paymentText = `\n\n⚠️ PAYMENT DETAILS – VIEW SECURELY\n\nCustomer has provided payment. You can view details in two ways:\n\n1) One-time link (do not share): ${operatorPaymentLink}\n   After viewing, that link cannot be used again.\n\n2) Reservations page: Go to ${reservationsUrl} and enter the confirmation number (e.g. ${refCode || 'HTO-XXXXXX'}) and your vendor password. Payment details will be viewable for 5 minutes, then permanently destroyed. If you need them again, contact the customer directly.\n\nPlease call customer at ${bookingDetails.customerPhone} to confirm before charging.\n`;
     paymentHtml = `
       <div style="background-color: #fff3cd; border: 2px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px;">
-        <h3 style="color: #856404; margin-top: 0;">⚠️ PAYMENT DETAILS – VIEW ONCE (SECURE)</h3>
-        <p>Customer has provided payment. <strong><a href="${operatorPaymentLink}">View details once here</a></strong> (do not share this link).</p>
-        <p style="color: #856404; font-weight: bold; margin-top: 15px;">After viewing, the link cannot be used again. Please call customer at ${bookingDetails.customerPhone} to confirm before charging.</p>
+        <h3 style="color: #856404; margin-top: 0;">⚠️ PAYMENT DETAILS – VIEW SECURELY</h3>
+        <p>Customer has provided payment. You can view details in two ways:</p>
+        <p><strong>1)</strong> <a href="${operatorPaymentLink}">View once at this link</a> (do not share). After viewing, the link cannot be used again.</p>
+        <p><strong>2)</strong> Go to <a href="${reservationsUrl}">${reservationsUrl}</a> and enter the confirmation number and your vendor password. Payment details will be viewable for 5 minutes, then permanently destroyed. If you need them again, contact the customer directly.</p>
+        <p style="color: #856404; font-weight: bold; margin-top: 15px;">Please call customer at ${bookingDetails.customerPhone} to confirm before charging.</p>
       </div>
     `;
   } else if (paymentDetails) {

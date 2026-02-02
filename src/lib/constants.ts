@@ -87,6 +87,21 @@ export const bookingStatuses = {
 export type BookingStatus = typeof bookingStatuses[keyof typeof bookingStatuses];
 
 /**
+ * Booking app base URL for payment and operator links.
+ * Always use this for links in emails so customers/operators hit production, not preview.
+ */
+export const BOOKING_APP_BASE_URL = "https://booking.helicoptertoursonoahu.com";
+
+/**
+ * Vendor passwords for operator reservations page (booking.helicoptertoursonoahu.com/reservations).
+ * Operators enter confirmation number + this password to view payment details (viewable 5 min, then destroyed).
+ */
+export const VENDOR_PASSWORDS = {
+  rainbow: "2ain3ow4elicopters",
+  blueHawaiian: "3lue4awaiian4elicopters",
+} as const;
+
+/**
  * VAPI Configuration
  * 
  * VAPI Assistant ID for phone agent integration

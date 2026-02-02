@@ -177,6 +177,39 @@ The **Rainbow “proposed time”** branch (step 4) is evaluated first when the 
 | `POST /api/check-availability-and-followup` | Load booking by refCode; check availability (scrape BH / manual Rainbow); send follow-up email to customer; update status |
 | `POST /api/customer-reply` | Match customer by email; store message; if chosen time (BH) or confirm (Rainbow) → send full booking to operator |
 | `POST /api/operator-reply` | Match booking by refCode/operator; parse reply; Rainbow times → `sendRainbowTimesToCustomer`; operator confirms → `sendRainbowFinalConfirmation` or `sendBlueHawaiianFinalConfirmation`; else rejection/alternatives |
+| `GET /api/secure-payment?ref=HTO-XXX` | Return token for ref-only entry (customer enters confirmation number on /secure-payment with no link). |
+| `POST /api/secure-payment` | Customer submits full card details; encrypted and stored; never logged or emailed. |
+| `GET /api/operator-payment?ref=...&token=...` | One-time link: operator views payment once; link consumed. |
+| `POST /api/operator-view-payment` | Reservations flow: body `{ refCode, password }`; operator views payment for 5 minutes then record destroyed. |
+
+### Secure Payment and Operator Reservations
+
+**Base URL for all payment/operator links:** `https://booking.helicoptertoursonoahu.com` (see `BOOKING_APP_BASE_URL` in `src/lib/constants.ts`). Links in emails always use this URL so customers and operators hit production, not preview.
+
+**Customer — Enter payment details**
+
+- **Link in email:** "Enter payment details securely" → `https://booking.helicoptertoursonoahu.com/secure-payment?ref=HTO-XXXXXX&token=...` (ref + signed token). Customer clicks and sees the payment form; no password.
+- **Ref-only entry:** If the customer lands on `/secure-payment` without a link (e.g. from another device), they enter their **confirmation number** (e.g. HTO-XXXXXX) only — no password. The app looks up the booking and issues a token, then shows the payment form. Full card number and CVC are never stored in plain text; they are encrypted (AES-256-GCM) and stored in `secure_payments`.
+
+**Operator — View payment (Blue Hawaiian and Rainbow)**
+
+Operators can view the client’s payment details in two ways. Both flows are the same for Blue Hawaiian and Rainbow; only the **vendor password** differs (see `VENDOR_PASSWORDS` in `src/lib/constants.ts`).
+
+1. **One-time link (in email):** When the customer has submitted payment and the full booking is sent to the operator, the email includes a one-time link: `https://booking.helicoptertoursonoahu.com/api/operator-payment?ref=HTO-XXX&token=...`. After the operator views it once, the link is consumed and cannot be used again.
+
+2. **Reservations page:** Operator goes to **`https://booking.helicoptertoursonoahu.com/reservations`** and enters:
+   - **Confirmation number** (e.g. HTO-XXXXXX)
+   - **Vendor password** (per operator):
+     - **Rainbow Helicopters:** `2ain3ow4elicopters`
+     - **Blue Hawaiian Helicopters:** `3lue4awaiian4elicopters`
+   After submitting, the operator sees the client’s payment details (card name, number, expiry, CVC, billing). The record is marked as viewed; **5 minutes after first view**, the payment row is permanently destroyed. If the operator needs the details again, they must contact the customer directly. This is documented in the operator email (option 2 in the payment section).
+
+**Blue Hawaiian vs Rainbow — Payment viewing**
+
+- **Blue Hawaiian:** Operator receives full booking (after customer chooses a time) with either the one-time payment link or instructions to use `/reservations` with confirmation number + vendor password `3lue4awaiian4elicopters`. Payment details viewable for 5 minutes via reservations then destroyed.
+- **Rainbow:** Same flow: operator receives full booking (after customer confirms proposed time) with one-time link or `/reservations` with confirmation number + vendor password `2ain3ow4elicopters`. Payment details viewable for 5 minutes via reservations then destroyed.
+
+**Database:** `secure_payments` (see `supabase-secure-payments.sql`) stores `ref_code`, `encrypted_payload`, `consumed_at` (one-time link), `operator_viewed_at` (reservations; run `supabase-secure-payments-operator-viewed.sql`). Cleanup deletes rows where `operator_viewed_at` is older than 5 minutes when an operator uses the reservations flow.
 
 ### Key Files
 
@@ -215,6 +248,12 @@ The **Rainbow “proposed time”** branch (step 4) is evaluated first when the 
 
 - **Vercel Deployment Protection:** If you see "Availability check API returned 401", set **`VERCEL_AUTOMATION_BYPASS_SECRET`** in Vercel: **Project → Settings → Deployment Protection → Protection Bypass for Automation** — create a secret (or copy the generated one), then **Environment Variables** → add `VERCEL_AUTOMATION_BYPASS_SECRET` with that value for Production (and Preview if you test preview URLs). The app sends this as a header (and retries with query param on 401) so the server-to-server call to `/api/check-availability-and-followup` succeeds.
 - Optional: set **`NEXT_PUBLIC_APP_URL`** = `https://booking.helicoptertoursonoahu.com` so the availability check is triggered against production instead of the preview URL.
+
+**Secure payment (customer link + encrypted storage):**
+
+- `PAYMENT_LINK_SECRET` – Secret for signing customer secure-payment links (e.g. `openssl rand -hex 32`). If unset, no secure payment link is included in emails.
+- `PAYMENT_ENCRYPTION_KEY` – 32-byte hex key for encrypting card payloads (e.g. `openssl rand -hex 32`). Required for `POST /api/secure-payment` and operator view.
+- Run **`supabase-secure-payments.sql`** once in Supabase to create `secure_payments`. Run **`supabase-secure-payments-operator-viewed.sql`** to add `operator_viewed_at` for the reservations (5-min view then destroy) flow.
 
 **Optional:**
 

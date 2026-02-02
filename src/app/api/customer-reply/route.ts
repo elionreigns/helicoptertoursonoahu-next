@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, insertBooking, updateBooking, getBookingByRefCode, type InsertBookingResult } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database.types';
-import { bookingStatuses, operators, VAPI_PHONE_NUMBER } from '@/lib/constants';
+import { bookingStatuses, operators, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { analyzeEmail, analyzeCustomerAvailabilityReply } from '@/lib/openai';
 import { sendEmail, sendBookingRequestToOperator, sendRainbowFinalConfirmation } from '@/lib/email';
 import type { RainbowIsland } from '@/lib/email';
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
                 .from('secure_payments')
                 .update({ operator_token: operatorToken } as never)
                 .eq('id', row.id);
-              const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_APP_URL || 'https://booking.helicoptertoursonoahu.com';
+              const baseUrl = BOOKING_APP_BASE_URL;
               operatorPaymentLink = `${baseUrl.replace(/\/$/, '')}/api/operator-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(operatorToken)}`;
             }
           }

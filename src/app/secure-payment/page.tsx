@@ -3,13 +3,19 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 
+const REF_REGEX = /^HTO-[A-Z0-9]{6}$/i;
+
 function SecurePaymentForm() {
   const searchParams = useSearchParams();
-  const refCode = searchParams.get('ref') ?? '';
-  const token = searchParams.get('token') ?? '';
+  const refFromUrl = searchParams.get('ref') ?? '';
+  const tokenFromUrl = searchParams.get('token') ?? '';
+  const [refCode, setRefCode] = useState(refFromUrl);
+  const [token, setToken] = useState(tokenFromUrl);
+  const [refEntry, setRefEntry] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingRef, setLoadingRef] = useState(false);
   const [formData, setFormData] = useState({
     card_name: '',
     card_number: '',
@@ -19,11 +25,67 @@ function SecurePaymentForm() {
     billing_zip: '',
   });
 
+  // No ref/token: show "Enter confirmation number" step
   if (!refCode || !token) {
+    const handleRefSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      const ref = refEntry.trim().toUpperCase();
+      if (!REF_REGEX.test(ref)) {
+        setError('Please enter a valid confirmation number (e.g. HTO-XXXXXX).');
+        return;
+      }
+      setError('');
+      setLoadingRef(true);
+      try {
+        const res = await fetch(`/api/secure-payment?ref=${encodeURIComponent(ref)}`);
+        const data = await res.json();
+        if (!res.ok || !data.valid) {
+          setError(data.error || 'Booking not found. Please use the link from your confirmation email.');
+          return;
+        }
+        setRefCode(ref);
+        setToken(data.token);
+      } catch {
+        setError('Network error. Please try again.');
+      } finally {
+        setLoadingRef(false);
+      }
+    };
+
     return (
-      <div className="max-w-md mx-auto mt-12 p-6 bg-white rounded-lg shadow text-center">
-        <p className="text-red-600 font-medium">Invalid or expired link.</p>
-        <p className="text-gray-600 mt-2 text-sm">Please use the link from your confirmation email.</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
+        <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-6">
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Enter Payment Details</h1>
+          <p className="text-sm text-gray-600 mb-6">
+            Enter your confirmation number from your email (e.g. HTO-XXXXXX). No password required.
+          </p>
+          <form onSubmit={handleRefSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="refEntry" className="block text-sm font-medium text-gray-700 mb-1">Confirmation number *</label>
+              <input
+                type="text"
+                id="refEntry"
+                value={refEntry}
+                onChange={(e) => setRefEntry(e.target.value.toUpperCase())}
+                required
+                placeholder="HTO-XXXXXX"
+                maxLength={10}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            {error && <p className="text-red-600 text-sm">{error}</p>}
+            <button
+              type="submit"
+              disabled={loadingRef}
+              className="w-full bg-blue-600 text-white py-3 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50"
+            >
+              {loadingRef ? 'Checking…' : 'Continue'}
+            </button>
+          </form>
+          <p className="text-gray-500 text-xs mt-4">
+            Or use the full link from your confirmation email if you have it.
+          </p>
+        </div>
       </div>
     );
   }

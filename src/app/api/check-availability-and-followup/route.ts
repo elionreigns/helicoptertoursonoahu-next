@@ -4,8 +4,7 @@ import { checkAvailability } from '@/lib/browserAutomation';
 import { sendRainbowFirstFollowUp, sendBlueHawaiianFirstFollowUp, sendRainbowArrangeNotificationToAgent } from '@/lib/email';
 import { getBookingByRefCode, updateBooking } from '@/lib/supabaseClient';
 import { generateCustomerToken } from '@/lib/securePayment';
-import { bookingStatuses, emails, isOperatorOrInternalEmail } from '@/lib/constants';
-import { VAPI_PHONE_NUMBER } from '@/lib/constants';
+import { bookingStatuses, emails, isOperatorOrInternalEmail, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { getTourById } from '@/lib/tours';
 
 const requestSchema = z.object({
@@ -129,7 +128,7 @@ export async function POST(request: NextRequest) {
         let securePaymentLink: string | undefined;
         try {
           if (process.env.PAYMENT_LINK_SECRET && booking.ref_code) {
-            const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_APP_URL || 'https://booking.helicoptertoursonoahu.com';
+            const baseUrl = BOOKING_APP_BASE_URL;
             securePaymentLink = `${baseUrl.replace(/\/$/, '')}/secure-payment?ref=${encodeURIComponent(booking.ref_code)}&token=${encodeURIComponent(generateCustomerToken(booking.ref_code))}`;
           }
         } catch {
@@ -151,7 +150,7 @@ export async function POST(request: NextRequest) {
         let securePaymentLink: string | undefined;
         try {
           if (process.env.PAYMENT_LINK_SECRET && booking.ref_code) {
-            const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_APP_URL || 'https://booking.helicoptertoursonoahu.com';
+            const baseUrl = BOOKING_APP_BASE_URL;
             securePaymentLink = `${baseUrl.replace(/\/$/, '')}/secure-payment?ref=${encodeURIComponent(booking.ref_code)}&token=${encodeURIComponent(generateCustomerToken(booking.ref_code))}`;
           }
         } catch {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertBooking } from '@/lib/supabaseClient';
 import type { BookingsInsert } from '@/lib/database.types';
-import { operators } from '@/lib/constants'; // Import operators for operator selection
+import { operators, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { generateCustomerToken } from '@/lib/securePayment';
 import { sendConfirmationToCustomer, sendRainbowAvailabilityInquiry, sendInternalBookingAlert } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
@@ -252,7 +252,7 @@ export async function POST(request: NextRequest) {
     let securePaymentLink: string | undefined;
     try {
       securePaymentLink = process.env.PAYMENT_LINK_SECRET
-        ? `${process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : process.env.NEXT_PUBLIC_APP_URL || 'https://booking.helicoptertoursonoahu.com'}`.replace(/\/$/, '') + `/secure-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(generateCustomerToken(refCode))}`
+        ? `${BOOKING_APP_BASE_URL.replace(/\/$/, '')}/secure-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(generateCustomerToken(refCode))}`
         : undefined;
     } catch {
       // PAYMENT_LINK_SECRET not set; no secure link

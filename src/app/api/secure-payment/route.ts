@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, getBookingByRefCode, updateBooking } from '@/lib/supabaseClient';
-import { verifyCustomerToken, encryptPayload } from '@/lib/securePayment';
+import { verifyCustomerToken, encryptPayload, generateCustomerToken } from '@/lib/securePayment';
+
+/** GET /api/secure-payment?ref=HTO-XXXXXX — Return token for ref-only entry (customer enters confirmation number). */
+export async function GET(request: NextRequest) {
+  const ref = request.nextUrl.searchParams.get('ref');
+  if (!ref || !/^HTO-[A-Z0-9]{6}$/.test(ref)) {
+    return NextResponse.json({ valid: false, error: 'Invalid confirmation number' }, { status: 400 });
+  }
+  const { data: booking, error } = await getBookingByRefCode(ref);
+  if (error || !booking) {
+    return NextResponse.json({ valid: false, error: 'Booking not found' }, { status: 404 });
+  }
+  const token = generateCustomerToken(ref);
+  return NextResponse.json({ valid: true, token });
+}
 
 const securePaymentSchema = z.object({
   refCode: z.string().regex(/^HTO-[A-Z0-9]{6}$/),
