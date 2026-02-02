@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+/** Lazy client so build doesn't require OPENAI_API_KEY (only needed at runtime when API is called). */
+function getOpenAI(): OpenAI {
+  const key = process.env.OPENAI_API_KEY?.trim();
+  if (!key) {
+    throw new Error('The OPENAI_API_KEY environment variable is missing or empty; either provide it, or instantiate the OpenAI client with an apiKey option, like new OpenAI({ apiKey: \'My API Key\' }).');
+  }
+  return new OpenAI({ apiKey: key });
+}
 
 interface BookingData {
   name?: string;
@@ -90,7 +95,8 @@ IMPORTANT: Always return valid JSON. The message field should be your conversati
       content: message,
     });
 
-    // Call OpenAI
+    // Call OpenAI (client created at request time so build doesn't require env var)
+    const openai = getOpenAI();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages,
