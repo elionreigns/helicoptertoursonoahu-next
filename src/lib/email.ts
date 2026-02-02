@@ -533,6 +533,66 @@ Helicopter Tours on Oahu
 }
 
 /**
+ * Notify internal alert address that a new booking was submitted (never shown to customers).
+ * Customer-facing confirmation and follow-up all go from bookings@helicoptertoursonoahu.com.
+ */
+export async function sendInternalBookingAlert({
+  refCode,
+  customerName,
+  customerEmail,
+  operatorName,
+  preferredDate,
+  partySize,
+  tourName,
+  source,
+}: {
+  refCode: string;
+  customerName: string;
+  customerEmail: string;
+  operatorName: string;
+  preferredDate: string;
+  partySize: number;
+  tourName?: string;
+  source?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const subject = `New booking: ${refCode} – ${customerName}`;
+  const text = `
+New booking submitted.
+
+Reference: ${refCode}
+Customer: ${customerName}
+Email: ${customerEmail}
+Operator: ${operatorName}
+Preferred date: ${preferredDate}
+Party size: ${partySize}
+${tourName ? `Tour: ${tourName}` : ''}
+${source ? `Source: ${source}` : ''}
+
+Customer confirmation was sent from bookings@helicoptertoursonoahu.com. Follow-up and operator contact run through the booking system (Resend / bookings@).
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1e40af;">New booking: ${refCode}</h2>
+      <p><strong>Customer:</strong> ${customerName} &lt;${customerEmail}&gt;</p>
+      <p><strong>Operator:</strong> ${operatorName}</p>
+      <p><strong>Preferred date:</strong> ${preferredDate}</p>
+      <p><strong>Party size:</strong> ${partySize}</p>
+      ${tourName ? `<p><strong>Tour:</strong> ${tourName}</p>` : ''}
+      ${source ? `<p><strong>Source:</strong> ${source}</p>` : ''}
+      <p style="color: #64748b; font-size: 12px;">Confirmation sent to customer from bookings@helicoptertoursonoahu.com. Do not reply to this alert.</p>
+    </div>
+  `;
+  return sendEmail({
+    to: emails.internalAlert,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
  * Notify the internal agent to arrange with Rainbow Helicopters for a booking.
  * Sent when we've emailed the client the "we're in contact with Rainbow" follow-up.
  */

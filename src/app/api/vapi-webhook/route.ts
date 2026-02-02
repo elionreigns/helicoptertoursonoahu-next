@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       action: 'end_call',
-      message: `Perfect! I've submitted your booking request. Your reference code is ${refCode}. You'll receive a confirmation email at ${extractedData.email} shortly, and we'll check availability and get back to you soon. Thank you for calling Helicopter Tours on Oahu!`,
+      message: `Perfect! I've submitted your booking request. Your reference code is ${refCode}. You'll receive a confirmation email from us at the email you provided shortly, and we'll check availability and get back to you soon. Thank you for calling Helicopter Tours on Oahu!`,
       booking: {
         ref_code: refCode,
         id: bookResult.booking?.id,

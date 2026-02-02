@@ -19,6 +19,8 @@ export const emails = {
   bookingsHub: "bookings@helicoptertoursonoahu.com",        // Main incoming email hub - used for From when sending
   /** Reply-To for all outgoing emails so replies go here; set to subdomain where Resend Inbound receives (e.g. booking.helicoptertoursonoahu.com) */
   bookingsHubInbound: "bookings@booking.helicoptertoursonoahu.com",
+  /** Internal alert: notified when a new booking is submitted (never shown to customers) */
+  internalAlert: "elionreigns@gmail.com",
   testAgent: "ericbelievesinjesusbecause@gmail.com",        // Agent email that handles client communication (for testing)
   testClient: "elionreigns@gmail.com",                      // Client email for testing purposes
   blueHawaiian: "coralcrowntechnologies@gmail.com",         // Blue Hawaiian Helicopters - UPDATE TO REAL EMAIL
@@ -32,6 +34,7 @@ export const emails = {
 const FOLLOW_UP_BLOCKED_EMAILS = [
   emails.bookingsHub,
   emails.bookingsHubInbound,
+  emails.internalAlert,
   emails.testAgent,
   emails.blueHawaiian,
   emails.rainbow,

@@ -4,7 +4,7 @@ import { insertBooking } from '@/lib/supabaseClient';
 import type { BookingsInsert } from '@/lib/database.types';
 import { operators } from '@/lib/constants'; // Import operators for operator selection
 import { generateCustomerToken } from '@/lib/securePayment';
-import { sendConfirmationToCustomer, sendRainbowAvailabilityInquiry } from '@/lib/email';
+import { sendConfirmationToCustomer, sendRainbowAvailabilityInquiry, sendInternalBookingAlert } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 
@@ -279,6 +279,27 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.error('Error sending confirmation email to customer:', error);
+    }
+
+    // Notify internal alert (elionreigns@gmail.com) — never shown to customers; all customer-facing email is from bookings@
+    try {
+      const alertResult = await sendInternalBookingAlert({
+        refCode,
+        customerName: validated.name,
+        customerEmail: validated.email,
+        operatorName: operator.name,
+        preferredDate: validated.preferred_date,
+        partySize: validated.party_size,
+        tourName: tourName,
+        source: validated.source,
+      });
+      if (alertResult.success) {
+        console.log('Internal booking alert sent');
+      } else {
+        console.error('Internal booking alert failed:', alertResult.error);
+      }
+    } catch (error) {
+      console.error('Error sending internal booking alert:', error);
     }
 
     // Call n8n webhook if configured

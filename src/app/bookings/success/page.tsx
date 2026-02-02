@@ -213,13 +213,13 @@ function BookingSuccessContent() {
           </div>
         </div>
 
-        {/* Next Steps */}
+        {/* Next Steps - customer sees bookings@ as sender, not internal addresses */}
         <div className="bg-blue-50 rounded-lg p-6 mb-6 border border-blue-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-3">What's Next?</h3>
           <ul className="space-y-2 text-gray-700">
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
-              <span>You'll receive a confirmation email at {bookingData.email || 'your email address'} within 24 hours</span>
+              <span>You&apos;ll receive a confirmation email from <strong>bookings@helicoptertoursonoahu.com</strong> at the email you provided within 24 hours</span>
             </li>
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
