@@ -4,10 +4,10 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Book Oahu Helicopter Tours',
   description:
-    'Book your Oahu helicopter tour with Blue Hawaiian or Rainbow Helicopters. Fill out the form—we confirm availability and send your reference code. Helicopter tours on Oahu, Maui, Kauai, Big Island.',
+    'Book your Oahu helicopter tour with Blue Hawaiian Helicopters. Fill out the form—we confirm availability and send your reference code. Tours on Oʻahu, Maui, Kauaʻi, and the Big Island.',
   openGraph: {
     title: 'Book Oahu Helicopter Tours | Helicopter Tours on Oahu',
-    description: 'Book Oahu helicopter tours with Blue Hawaiian & Rainbow. Compare operators and submit your booking request.',
+    description: 'Book with Blue Hawaiian Helicopters. Submit your request—we confirm availability and follow up by email.',
     url: 'https://booking.helicoptertoursonoahu.com/bookings',
   },
   alternates: { canonical: 'https://booking.helicoptertoursonoahu.com/bookings' },
@@ -26,49 +26,12 @@ export default function BookingsPage() {
           </p>
         </div>
 
-        {/* Operator Comparison Section */}
-        <div className="max-w-5xl mx-auto mb-12 bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 sm:px-6 py-4">
-            <h2 className="text-xl sm:text-2xl font-bold text-center">Compare Our Top Operators</h2>
-          </div>
-          <div className="overflow-x-auto px-4 sm:px-6 py-1">
-            <table className="w-full min-w-[280px]">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="px-4 sm:px-6 py-3 sm:py-4 text-left font-semibold text-gray-900 text-sm sm:text-base">Feature</th>
-                  <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-semibold text-gray-900 text-sm sm:text-base">Blue Hawaiian</th>
-                  <th className="px-4 sm:px-6 py-3 sm:py-4 text-center font-semibold text-gray-900 text-sm sm:text-base">Rainbow Helicopters</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Experience</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Premium tours with luxury helicopters</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Adventure-focused with doors-off options</td>
-                </tr>
-                <tr className="hover:bg-gray-50 bg-gray-50/50">
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Tour Types</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Oahu, Big Island, Maui, Kauai, Lanai</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Oahu & Big Island</td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Doors-Off</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Limited options</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Multiple doors-off tours</td>
-                </tr>
-                <tr className="hover:bg-gray-50 bg-gray-50/50">
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Price Range</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">$200 – $500+</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">$200 – $400+</td>
-                </tr>
-                <tr className="hover:bg-gray-50">
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 font-medium text-gray-900 text-sm sm:text-base">Best For</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Luxury experience, multiple islands</td>
-                  <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-gray-700 text-sm sm:text-base">Adventure seekers & photography</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        <div className="max-w-3xl mx-auto mb-12 rounded-xl border border-blue-200 bg-blue-50/80 px-5 py-6 text-center text-gray-800">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Blue Hawaiian Helicopters</h2>
+          <p className="text-sm sm:text-base leading-relaxed">
+            New bookings on this site use <strong>Blue Hawaiian</strong> (luxury Eco-Star fleet). After you submit the form, we confirm availability and email next steps.
+            For other partnership inquiries, your team can use archived materials on the main site under pending vendors.
+          </p>
         </div>
 
         <BookingForm />

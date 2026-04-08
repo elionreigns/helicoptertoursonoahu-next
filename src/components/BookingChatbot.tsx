@@ -112,7 +112,7 @@ export default function BookingChatbot() {
         {
           role: 'assistant',
           content:
-            "Aloha! Welcome to Helicopter Tours on Oahu. We service the island of Oahu as well as some of the other islands. Which island would you like to know more about?",
+            "Aloha! Welcome to Helicopter Tours on Oahu. We currently book **Blue Hawaiian Helicopters** scenic flights across Hawaii. Which island would you like to explore?",
           buttons: islands.map((island) => ({ label: island, action: `island_${island}` })),
         },
       ]);
@@ -131,38 +131,51 @@ export default function BookingChatbot() {
     if (action.startsWith('island_')) {
       const island = action.replace('island_', '');
       setSelectedIsland(island);
-      setSelectedOperator(null);
+      const op = 'blueHawaiian' as const;
+      setSelectedOperator(op);
       setSelectedTour(null);
       const blurb = ISLAND_BLURBS[island] || `Explore ${island} from the air.`;
       addMessage('user', island);
+      const operatorTours = getToursByIslandAndOperator(island, op);
+      const operatorName = 'Blue Hawaiian Helicopters';
+      if (operatorTours.length === 0) {
+        addMessage(
+          'assistant',
+          `${blurb}\n\nWe don't have Blue Hawaiian tours listed for ${island} at the moment. Try another island or call us at ${VAPI_PHONE_NUMBER}.`,
+          islands.map((i) => ({ label: i, action: `island_${i}` }))
+        );
+        setStep('intro');
+        setSelectedIsland(null);
+        setSelectedOperator(null);
+        return;
+      }
       addMessage(
         'assistant',
-        `${blurb}\n\nWould you like to know more about Rainbow Helicopters or Blue Hawaiian?`,
-        [
-          { label: 'Rainbow Helicopters', action: 'operator_rainbow' },
-          { label: 'Blue Hawaiian', action: 'operator_blueHawaiian' },
-        ]
+        `${blurb}\n\nHere are **${operatorName}** tours for ${island}. Click a tour to learn more:`,
+        operatorTours.map((t) => ({ label: t.name, action: `tour_${t.id}` }))
       );
-      setStep('operator');
+      setStep('tour');
       return;
     }
 
     if (action.startsWith('operator_')) {
-      const op = action.replace('operator_', '') as 'rainbow' | 'blueHawaiian';
+      const island = selectedIsland;
+      if (!island) return;
+      const op = 'blueHawaiian' as const;
       setSelectedOperator(op);
       setSelectedTour(null);
-      const operatorTours = selectedIsland ? getToursByIslandAndOperator(selectedIsland, op) : [];
-      const operatorName = op === 'rainbow' ? 'Rainbow Helicopters' : 'Blue Hawaiian';
+      const operatorTours = getToursByIslandAndOperator(island, op);
+      const operatorName = 'Blue Hawaiian Helicopters';
       addMessage('user', operatorName);
       if (operatorTours.length === 0) {
-        addMessage('assistant', `We don't have ${operatorName} tours listed for ${selectedIsland} at the moment. Try another island or operator.`, islands.map((i) => ({ label: i, action: `island_${i}` })));
+        addMessage('assistant', `We don't have ${operatorName} tours listed for ${island} at the moment. Try another island.`, islands.map((i) => ({ label: i, action: `island_${i}` })));
         setStep('intro');
         setSelectedIsland(null);
         return;
       }
       addMessage(
         'assistant',
-        `Here are our ${operatorName} tours for ${selectedIsland}. Click a tour to learn more:`,
+        `Here are our ${operatorName} tours for ${island}. Click a tour to learn more:`,
         operatorTours.map((t) => ({ label: t.name, action: `tour_${t.id}` }))
       );
       setStep('tour');
@@ -203,12 +216,11 @@ export default function BookingChatbot() {
       addMessage('user', 'Chat more');
       addMessage(
         'assistant',
-        "You can ask me anything about this tour, pricing, or what to expect. Type your question below. After each answer you can book, learn about another tour, switch island, or switch helicopter company.",
+        "You can ask me anything about this tour, pricing, or what to expect. Type your question below. After each answer you can book, pick another tour, or switch island.",
         [
           { label: 'Book this tour', action: 'book_tour' },
           { label: 'Learn about another tour', action: 'learn_another_tour' },
           { label: 'Switch island', action: 'switch_island' },
-          { label: 'Switch helicopter company', action: 'switch_operator' },
         ]
       );
       setStep('chat');
@@ -219,7 +231,7 @@ export default function BookingChatbot() {
       addMessage('user', 'Learn about another tour');
       if (selectedIsland && selectedOperator) {
         const operatorTours = getToursByIslandAndOperator(selectedIsland, selectedOperator);
-        const operatorName = selectedOperator === 'rainbow' ? 'Rainbow Helicopters' : 'Blue Hawaiian';
+        const operatorName = 'Blue Hawaiian Helicopters';
         addMessage(
           'assistant',
           `Here are our ${operatorName} tours for ${selectedIsland} again:`,
@@ -245,18 +257,16 @@ export default function BookingChatbot() {
     }
 
     if (action === 'switch_operator') {
-      addMessage('user', 'Switch helicopter company');
+      addMessage('user', 'Other operators');
       addMessage(
         'assistant',
-        "Would you like to know more about Rainbow Helicopters or Blue Hawaiian?",
+        `This site currently books **Blue Hawaiian Helicopters** only. For special partnership requests, call ${VAPI_PHONE_NUMBER}.`,
         [
-          { label: 'Rainbow Helicopters', action: 'operator_rainbow' },
-          { label: 'Blue Hawaiian', action: 'operator_blueHawaiian' },
+          { label: 'Learn about another tour', action: 'learn_another_tour' },
+          { label: 'Switch island', action: 'switch_island' },
         ]
       );
-      setSelectedOperator(null);
-      setSelectedTour(null);
-      setStep('operator');
+      setStep('chat');
       return;
     }
   };
@@ -290,7 +300,6 @@ export default function BookingChatbot() {
             { label: 'Chat more', action: 'chat_more' },
             { label: 'Learn about another tour', action: 'learn_another_tour' },
             { label: 'Switch island', action: 'switch_island' },
-            { label: 'Switch helicopter company', action: 'switch_operator' },
           ]
         );
       } catch (err) {
@@ -360,8 +369,8 @@ export default function BookingChatbot() {
   };
 
   const submitBookingFromChat = async () => {
-    if (!selectedOperator || !selectedTour) {
-      addMessage('assistant', 'Missing tour or operator. Please start over or call us.');
+    if (!selectedTour) {
+      addMessage('assistant', 'Missing tour selection. Please start over or call us.');
       return;
     }
     setIsSubmittingBooking(true);
@@ -378,7 +387,7 @@ export default function BookingChatbot() {
       special_requests: bookingData.special_requests,
       total_weight: bookingData.total_weight || 300,
       source: 'chatbot',
-      operator_preference: selectedOperator,
+      operator_preference: selectedOperator || 'blueHawaiian',
       tour_id: selectedTour.id,
       tour_name: selectedTour.name,
     };
@@ -404,7 +413,7 @@ export default function BookingChatbot() {
           total_weight: payload.total_weight,
           doors_off: payload.doors_off,
           hotel: payload.hotel,
-          operator: selectedOperator === 'rainbow' ? 'Rainbow Helicopters' : 'Blue Hawaiian Helicopters',
+          operator: 'Blue Hawaiian Helicopters',
           tour_name: selectedTour.name,
           total_price: calculateTotalPrice(selectedTour.id, payload.party_size),
         };

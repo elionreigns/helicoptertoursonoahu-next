@@ -30,7 +30,7 @@ export default function BookingForm() {
     name: '',
     email: '',
     phone: '',
-    operator_preference: '',
+    operator_preference: 'blueHawaiian',
     tour_name: '',
     party_size: 2,
     preferred_date: '',
@@ -103,10 +103,6 @@ export default function BookingForm() {
 
     if (!formData.total_weight || formData.total_weight < 100) {
       newErrors.total_weight = 'Total weight must be at least 100 lbs';
-    }
-
-    if (!formData.operator_preference) {
-      newErrors.operator_preference = 'Please select an operator';
     }
 
     if (!formData.tour_name) {
@@ -354,33 +350,13 @@ export default function BookingForm() {
         {/* Operator and Tour Selection */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="operator_preference" className="block text-sm font-medium text-gray-700 mb-1">
-              Operator *
-            </label>
-            <select
-              id="operator_preference"
-              name="operator_preference"
-              required
-              aria-required="true"
-              aria-invalid={errors.operator_preference ? 'true' : 'false'}
-              aria-describedby={errors.operator_preference ? 'operator_preference-error' : undefined}
-              value={formData.operator_preference}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, operator_preference: e.target.value as 'blueHawaiian' | 'rainbow' | '', tour_name: '' }));
-              }}
-              className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.operator_preference ? 'border-red-300' : 'border-gray-300'
-              }`}
-            >
-              <option value="">Select Operator</option>
-              <option value="blueHawaiian">Blue Hawaiian Helicopters</option>
-              <option value="rainbow">Rainbow Helicopters</option>
-            </select>
-            {errors.operator_preference && (
-              <p id="operator_preference-error" className="mt-1 text-sm text-red-600" role="alert">
-                {errors.operator_preference}
-              </p>
-            )}
+            <span className="block text-sm font-medium text-gray-700 mb-1">Operator</span>
+            <div className="w-full px-4 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-900">
+              Blue Hawaiian Helicopters
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Archived Rainbow Helicopters marketing is on the main site under pending vendors (partner login). Call (707) 381-2583 for special cases.
+            </p>
           </div>
 
           <div>
@@ -392,16 +368,15 @@ export default function BookingForm() {
               name="tour_name"
               required
               aria-required="true"
-              disabled={!formData.operator_preference}
               aria-invalid={errors.tour_name ? 'true' : 'false'}
               aria-describedby={errors.tour_name ? 'tour_name-error' : undefined}
               value={formData.tour_name}
               onChange={handleChange}
               className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                 errors.tour_name ? 'border-red-300' : 'border-gray-300'
-              } ${!formData.operator_preference ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              }`}
             >
-              <option value="">{formData.operator_preference ? 'Select Tour' : 'Select Operator First'}</option>
+              <option value="">Select Tour</option>
               {availableTours.map((tour) => (
                 <option key={tour.id} value={tour.id}>
                   {tour.name} - ${tour.pricePerPerson}/person

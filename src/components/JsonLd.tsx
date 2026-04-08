@@ -12,7 +12,7 @@ const organizationSchema = {
   url: MAIN_SITE,
   logo: `${MAIN_SITE}/images/helicoptertours-bluehawaiian.webp`,
   description:
-    'Your premier source for helicopter tours on Oahu. Book Oahu helicopter tours with Blue Hawaiian Helicopters and Rainbow Helicopters. Compare tours, prices, and book online or by phone.',
+    'Book Oahu and Hawaii helicopter tours with Blue Hawaiian Helicopters. Submit a request at booking.helicoptertoursonoahu.com or call (707) 381-2583.',
   telephone: '+1-707-381-2583',
   sameAs: [],
   contactPoint: {
@@ -36,7 +36,7 @@ const websiteSchema = {
   name: 'Helicopter Tours on Oahu - Book Online',
   url: BASE_URL,
   description:
-    'Book helicopter tours on Oahu with Blue Hawaiian and Rainbow Helicopters. Safe, scenic Oahu helicopter tours. Compare and book online.',
+    'Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Safe, scenic flights—book online or call (707) 381-2583.',
   publisher: {
     '@type': 'Organization',
     name: 'Helicopter Tours on Oahu',
@@ -61,7 +61,7 @@ const localBusinessSchema = {
   '@type': 'TouristAttraction',
   name: 'Helicopter Tours on Oahu',
   description:
-    'Oahu helicopter tours with Blue Hawaiian and Rainbow Helicopters. Book Hawaii helicopter tours—Oahu, Maui, Kauai, Big Island. Safe, scenic, personalized. Book online or call.',
+    'Oahu helicopter tours with Blue Hawaiian Helicopters. Book Hawaii scenic flights—Oahu, Maui, Kauai, Big Island. Safe, scenic, personalized. Book online or call.',
   url: MAIN_SITE,
   telephone: '+1-707-381-2583',
   address: {
