@@ -5,6 +5,8 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import BookingChatbot from "@/components/BookingChatbot";
 import JsonLd from "@/components/JsonLd";
+import SiteFooter from "@/components/SiteFooter";
+import WhatsAppFloat from "@/components/WhatsAppFloat";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -61,10 +63,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased bg-gradient-to-br from-blue-50 via-white to-orange-50`}>
+      <body className={`${inter.variable} font-sans antialiased bg-gradient-to-br from-blue-50 via-white to-orange-50 min-h-screen flex flex-col`}>
         <JsonLd />
         <Header />
-        {children}
+        <div className="flex-1 flex flex-col">{children}</div>
+        <SiteFooter />
+        <WhatsAppFloat />
         <BookingChatbot />
         {/* Fixed Home Button - positioned above chatbot */}
         <div className="fixed bottom-28 right-6 z-40">
