@@ -168,19 +168,23 @@ export async function POST(request: NextRequest) {
           if (refCode) {
             const { data: paymentRow } = await supabase
               .from('secure_payments')
-              .select('id')
+              .select('id, operator_token')
               .eq('ref_code', refCode)
               .is('consumed_at', null)
               .order('created_at', { ascending: false })
               .limit(1)
               .maybeSingle();
-            const row = paymentRow as { id?: string } | null;
+            const row = paymentRow as { id?: string; operator_token?: string | null } | null;
             if (row?.id) {
-              const operatorToken = generateOperatorToken();
-              await supabase
-                .from('secure_payments')
-                .update({ operator_token: operatorToken } as never)
-                .eq('id', row.id);
+              // Reuse token if already set (e.g. customer paid first; elionreigns@gmail.com already has the link)
+              let operatorToken = row.operator_token || null;
+              if (!operatorToken) {
+                operatorToken = generateOperatorToken();
+                await supabase
+                  .from('secure_payments')
+                  .update({ operator_token: operatorToken } as never)
+                  .eq('id', row.id);
+              }
               const baseUrl = BOOKING_APP_BASE_URL;
               operatorPaymentLink = `${baseUrl.replace(/\/$/, '')}/api/operator-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(operatorToken)}`;
             }

@@ -1,6 +1,6 @@
 import 'server-only';
 import nodemailer from 'nodemailer';
-import { emails, VAPI_PHONE_NUMBER } from './constants';
+import { emails, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from './constants';
 
 /** Reply-To for inbound: use env so you can set Resend's free .resend.app address without code change or paying for another domain. Exported for use in API routes that send email directly. */
 export const replyToInbound = () =>
@@ -583,6 +583,49 @@ Customer confirmation was sent from bookings@helicoptertoursonoahu.com. Follow-u
       ${tourName ? `<p><strong>Tour:</strong> ${tourName}</p>` : ''}
       ${source ? `<p><strong>Source:</strong> ${source}</p>` : ''}
       <p style="color: #64748b; font-size: 12px;">Confirmation sent to customer from bookings@helicoptertoursonoahu.com. Do not reply to this alert.</p>
+    </div>
+  `;
+  return sendEmail({
+    to: emails.internalAlert,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
+ * When a customer submits full card details via /secure-payment, email the internal address
+ * (elionreigns@gmail.com via emails.internalAlert) the one-time operator view link.
+ */
+export async function sendSecurePaymentOperatorLinkToInternal({
+  refCode,
+  operatorPaymentLink,
+  customerEmail,
+}: {
+  refCode: string;
+  operatorPaymentLink: string;
+  customerEmail?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const base = BOOKING_APP_BASE_URL.replace(/\/$/, '');
+  const reservationsUrl = `${base}/reservations`;
+  const subject = `Payment details received — ${refCode} (one-time view link)`;
+  const text = `
+A customer submitted payment details for reference ${refCode}.
+${customerEmail ? `Customer email: ${customerEmail}` : ''}
+
+One-time link to view payment (do not share; single use where applicable):
+${operatorPaymentLink}
+
+You can also use the reservations page: ${reservationsUrl} (confirmation number + vendor password; 5-minute view window per flow).
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1e40af;">Payment details received — ${refCode}</h2>
+      ${customerEmail ? `<p><strong>Customer:</strong> ${customerEmail}</p>` : ''}
+      <p><strong>One-time view link:</strong> <a href="${operatorPaymentLink}">View payment details</a></p>
+      <p style="color: #64748b; font-size: 13px;">Or use <a href="${reservationsUrl}">reservations</a> with the confirmation number and vendor password (5-minute view window).</p>
     </div>
   `;
   return sendEmail({

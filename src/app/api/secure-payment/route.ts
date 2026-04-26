@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, getBookingByRefCode, updateBooking } from '@/lib/supabaseClient';
-import { verifyCustomerToken, encryptPayload, generateCustomerToken } from '@/lib/securePayment';
+import { verifyCustomerToken, encryptPayload, generateCustomerToken, generateOperatorToken } from '@/lib/securePayment';
+import { sendSecurePaymentOperatorLinkToInternal } from '@/lib/email';
+import { BOOKING_APP_BASE_URL } from '@/lib/constants';
 
 /** GET /api/secure-payment?ref=HTO-XXXXXX — Return token for ref-only entry (customer enters confirmation number). */
 export async function GET(request: NextRequest) {
@@ -56,15 +58,33 @@ export async function POST(request: NextRequest) {
       billing_zip: validated.billing_zip ?? '',
     };
     const encrypted = encryptPayload(payload);
+    const operatorToken = generateOperatorToken();
 
     const { error: insertError } = await supabase.from('secure_payments').insert({
       ref_code: validated.refCode,
       encrypted_payload: encrypted,
+      operator_token: operatorToken,
     } as never);
 
     if (insertError) {
       console.error('Secure payment insert error:', insertError.message);
       return NextResponse.json({ success: false, error: 'Could not save payment details' }, { status: 500 });
+    }
+
+    const baseUrl = BOOKING_APP_BASE_URL.replace(/\/$/, '');
+    const operatorPaymentLink = `${baseUrl}/api/operator-payment?ref=${encodeURIComponent(validated.refCode)}&token=${encodeURIComponent(operatorToken)}`;
+
+    try {
+      const notify = await sendSecurePaymentOperatorLinkToInternal({
+        refCode: validated.refCode,
+        operatorPaymentLink,
+        customerEmail: booking.customer_email ?? undefined,
+      });
+      if (!notify.success) {
+        console.error('Secure payment: internal email failed:', notify.error);
+      }
+    } catch (e) {
+      console.error('Secure payment: internal email exception:', e);
     }
 
     const prevMeta = (booking.metadata ?? {}) as Record<string, unknown>;
