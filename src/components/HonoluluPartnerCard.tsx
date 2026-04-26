@@ -20,8 +20,10 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
           We also work with these guys
         </h2>
         <p className="text-center text-gray-600 mb-6 text-balance max-w-2xl mx-auto">
-          Another trusted Oʻahu operator—scenic and doors-off flights from Honolulu. Their live calendar and
-          checkout run on FareHarbor (opens in a new tab).
+          Another trusted Oʻahu operator—<strong className="font-semibold text-gray-800">Honolulu Helicopter Tours</strong>
+          —scenic, shared flights from Honolulu. They publish open times and checkout on{" "}
+          <strong className="font-semibold text-gray-800">FareHarbor</strong> (opens in a new tab) so you can book with{" "}
+          <strong className="font-semibold text-gray-800">live availability</strong>.
         </p>
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden flex flex-col md:flex-row">
           <div
@@ -35,17 +37,25 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
           />
           <div className="p-6 md:p-7 flex flex-col justify-center">
             <h3 className="text-xl font-bold text-blue-800 mb-2">Honolulu Helicopter Tours</h3>
-            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-4">
-              Diamond Head, windward coasts, waterfalls, and the skyline. Use their FareHarbor page to see open
-              times and complete booking—separate from the Blue Hawaiian flow below.
+            <p className="text-gray-700 text-sm md:text-base leading-relaxed mb-3">
+              <strong>Shared</strong> flights over Diamond Head, windward coasts, and the Oʻahu coastline.
+              Typical <strong>~30 min</strong> and <strong>~60 min</strong> options (and <strong>~18 min</strong> when
+              offered). <strong>From about $244 per person (30 min)</strong> to <strong>~$356+ per person (60 min)</strong>{" "}
+              in shared
+              pricing; solo, two-, and three-guest totals update on the calendar. Confirm the latest on FareHarbor.
+            </p>
+            <p className="text-sm text-gray-600 mb-4">
+              Use their page for <span className="font-semibold text-gray-800">live open times and instant booking</span>
+              —separate from the Blue Hawaiian request flow below.
             </p>
             <a
               href={FAREHARBOR_HONOLULU_HELICOPTER_TOURS}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 self-start rounded-xl bg-gradient-to-r from-blue-600 to-indigo-800 text-white font-bold px-5 py-3 text-sm shadow-md hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              aria-label="Book Honolulu Helicopter Tours on FareHarbor with live availability"
             >
-              <span aria-hidden>🎫</span> Book Honolulu Helicopter Tours
+              <span aria-hidden>🎫</span> Book on FareHarbor (live availability)
             </a>
           </div>
         </div>
