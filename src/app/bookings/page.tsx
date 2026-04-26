@@ -1,4 +1,5 @@
 import BookingForm from '@/components/BookingForm';
+import HonoluluPartnerCard from '@/components/HonoluluPartnerCard';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -17,13 +18,17 @@ export default function BookingsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       <main className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
             Book Your Oahu Helicopter Tour
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Fill out the form below and we'll handle the rest. You'll receive a confirmation with your reference code.
+            Fill out the form below and we&apos;ll handle the rest. You&apos;ll receive a confirmation with your reference code.
           </p>
+        </div>
+
+        <div className="mb-10 -mt-2">
+          <HonoluluPartnerCard />
         </div>
 
         <div className="max-w-3xl mx-auto mb-12 rounded-xl border border-blue-200 bg-blue-50/80 px-5 py-6 text-center text-gray-800">
