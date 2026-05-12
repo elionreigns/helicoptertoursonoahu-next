@@ -7,6 +7,7 @@ import BookingChatbot from "@/components/BookingChatbot";
 import JsonLd from "@/components/JsonLd";
 import SiteFooter from "@/components/SiteFooter";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import { CUSTOMER_PHONE_DISPLAY } from "@/lib/constants";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Helicopter Tours on Oahu",
   },
   description:
-    "Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Luxury Eco-Star scenic flights—Oahu and neighbor islands. Book online or call (707) 381-2583.",
+    `Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Luxury Eco-Star scenic flights—Oahu and neighbor islands. Book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
   keywords: [
     "helicopter tours on oahu",
     "oahu helicopter tours",
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     siteName: "Helicopter Tours on Oahu",
     title: "Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online",
     description:
-      "Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Scenic Hawaii helicopter tours—book online or call (707) 381-2583.",
+      `Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Scenic Hawaii helicopter tours—book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Helicopter Tours on Oahu" }],
   },
   robots: {

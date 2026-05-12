@@ -1,7 +1,6 @@
 import Link from "next/link";
 import WhatsAppIcon from "./WhatsAppIcon";
-
-const WHATSAPP_HREF = "https://wa.me/18083930153";
+import { WHATSAPP_CHAT_URL } from "@/lib/constants";
 
 export default function SiteFooter() {
   return (
@@ -17,7 +16,7 @@ export default function SiteFooter() {
             Out of the Country? Get Ahold of us Via WhatsApp
           </p>
           <Link
-            href={WHATSAPP_HREF}
+            href={WHATSAPP_CHAT_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[#075e54] font-bold text-sm md:text-base shadow-md hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#128c7e]"

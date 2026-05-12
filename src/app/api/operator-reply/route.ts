@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabase, updateBooking, getBookingByRefCode } from '@/lib/supabaseClient';
 import type { BookingsRow, BookingsUpdate } from '@/lib/database.types';
-import { bookingStatuses, operators, emails, VAPI_PHONE_NUMBER } from '@/lib/constants'; // Import operators for operator selection
+import {
+  bookingStatuses,
+  operators,
+  emails,
+  VAPI_PHONE_NUMBER,
+  CUSTOMER_PHONE_DISPLAY,
+  CUSTOMER_PHONE_TEL,
+  WHATSAPP_CHAT_URL,
+} from '@/lib/constants'; // Import operators for operator selection
 import { parseOperatorReply } from '@/lib/openai';
 import { sendEmail, sendRainbowTimesToCustomer, sendRainbowFinalConfirmation, sendBlueHawaiianFinalConfirmation, replyToInbound } from '@/lib/email';
 import type { RainbowIsland, BlueHawaiianIsland } from '@/lib/email';
@@ -235,7 +243,7 @@ export async function POST(request: NextRequest) {
         const notifyResult = await sendEmail({
           to: booking.customer_email,
           subject: `Booking Update - ${booking.ref_code || 'Your Tour'}`,
-          text: `Dear ${booking.customer_name},\n\nGreat news! ${validated.operatorName || booking.operator_name || 'The operator'} has received your booking request and will contact you directly to confirm your tour details and finalize your booking.\n\nYou can expect to hear from them soon with:\n- Confirmed time slot\n- Final pricing\n- Meeting location and instructions\n\nIf you have any questions in the meantime, feel free to reply to this email or call us at (707) 381-2583.\n\nBest regards,\nHelicopter Tours on Oahu\n\nReference Code: ${booking.ref_code || 'N/A'}`,
+          text: `Dear ${booking.customer_name},\n\nGreat news! ${validated.operatorName || booking.operator_name || 'The operator'} has received your booking request and will contact you directly to confirm your tour details and finalize your booking.\n\nYou can expect to hear from them soon with:\n- Confirmed time slot\n- Final pricing\n- Meeting location and instructions\n\nIf you have any questions in the meantime, reply to this email, call us at ${CUSTOMER_PHONE_DISPLAY}, or message us on WhatsApp: ${WHATSAPP_CHAT_URL}\n\nBest regards,\nHelicopter Tours on Oahu\n\nReference Code: ${booking.ref_code || 'N/A'}`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #1a73e8;">Booking Update - ${booking.ref_code || 'Your Tour'}</h2>
@@ -249,7 +257,7 @@ export async function POST(request: NextRequest) {
                   <li>Meeting location and instructions</li>
                 </ul>
               </div>
-              <p>If you have any questions in the meantime, feel free to reply to this email or call us at <strong><a href="tel:+17073812583">(707) 381-2583</a></strong>.</p>
+              <p>If you have any questions in the meantime, reply to this email, call us at <strong><a href="${CUSTOMER_PHONE_TEL}">${CUSTOMER_PHONE_DISPLAY}</a></strong>, or message us on <a href="${WHATSAPP_CHAT_URL}">WhatsApp</a>.</p>
               <p>Best regards,<br><strong>Helicopter Tours on Oahu</strong></p>
               <p style="color: #94a3b8; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
                 Reference Code: <strong>${booking.ref_code || 'N/A'}</strong>

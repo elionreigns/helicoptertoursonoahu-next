@@ -40,9 +40,33 @@ const vapiWebhookSchema = z.object({
  * Rainbow availability inquiry only, and check-availability-and-followup (client follow-up).
  *
  * Webhook URL: https://booking.helicoptertoursonoahu.com/api/vapi-webhook
+ *
+ * Optional: set VAPI_WEBHOOK_SECRET in Vercel and send the same value in header
+ * `x-vapi-webhook-secret` (or `Authorization: Bearer <secret>`) so only your VAPI project can POST.
  */
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    path: '/api/vapi-webhook',
+    method: 'POST',
+    description: 'VAPI end-of-call webhook; forwards extracted bookings to /api/new-booking-request',
+    secretConfigured: Boolean(process.env.VAPI_WEBHOOK_SECRET?.trim()),
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const webhookSecret = process.env.VAPI_WEBHOOK_SECRET?.trim();
+    if (webhookSecret) {
+      const provided =
+        request.headers.get('x-vapi-webhook-secret') ??
+        request.headers.get('X-Vapi-Webhook-Secret') ??
+        request.headers.get('authorization')?.replace(/^Bearer\s+/i, '').trim();
+      if (provided !== webhookSecret) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+    }
+
     const body = await request.json();
     console.log('VAPI webhook received:', { type: body.message?.type, callId: body.message?.call?.id });
 

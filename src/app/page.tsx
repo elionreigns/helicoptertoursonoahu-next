@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import HonoluluPartnerCard from '@/components/HonoluluPartnerCard';
+import { FAREHARBOR_HONOLULU_HELICOPTER_TOURS } from '@/lib/partnerLinks';
+import { CUSTOMER_PHONE_DISPLAY } from '@/lib/constants';
 
 export const metadata: Metadata = {
   title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online',
@@ -8,7 +10,7 @@ export const metadata: Metadata = {
     'Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Luxury Eco-Star scenic flights—Oahu, Maui, Kauai, Big Island. Safe, scenic Hawaii helicopter tours—book online.',
   openGraph: {
     title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours',
-    description: 'Book Oahu helicopter tours with Blue Hawaiian Helicopters. Scenic flights across Hawaii—book online or call (707) 381-2583.',
+    description: `Book Oahu helicopter tours with Blue Hawaiian Helicopters. Scenic flights across Hawaii—book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
     url: 'https://booking.helicoptertoursonoahu.com',
   },
   alternates: { canonical: 'https://booking.helicoptertoursonoahu.com' },
@@ -53,12 +55,23 @@ export default function Home() {
               Personalized
             </span>
           </div>
-          <Link
-            href="/bookings"
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 rounded-xl text-lg md:text-xl font-semibold transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-blue-700"
-          >
-            Start Booking
-          </Link>
+          <div className="mb-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+            <Link
+              href="/bookings"
+              className="inline-block min-h-[48px] rounded-xl bg-orange-500 px-8 py-4 text-lg font-semibold text-white shadow-xl transition-all hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-blue-700"
+            >
+              Start Booking
+            </Link>
+            <a
+              href={FAREHARBOR_HONOLULU_HELICOPTER_TOURS}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hto-fh-cta-animate inline-flex min-h-[48px] max-w-md items-center justify-center gap-2 rounded-xl border-2 border-white/35 bg-gradient-to-r from-orange-500 via-orange-600 to-sky-900 px-6 py-4 text-center text-base font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 sm:text-lg"
+              aria-label="Open FareHarbor live calendar for Honolulu Helicopter Tours"
+            >
+              <span aria-hidden>🌺</span> Lock live seats — FareHarbor
+            </a>
+          </div>
         </div>
       </section>
 

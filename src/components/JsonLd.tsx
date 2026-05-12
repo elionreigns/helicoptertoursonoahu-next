@@ -2,6 +2,8 @@
  * JSON-LD structured data for SEO (Organization, WebSite, LocalBusiness).
  * Rendered in layout so all pages get the base schema.
  */
+import { CUSTOMER_PHONE_DISPLAY, CUSTOMER_PHONE_SCHEMA } from '@/lib/constants';
+
 const BASE_URL = 'https://booking.helicoptertoursonoahu.com';
 const MAIN_SITE = 'https://www.helicoptertoursonoahu.com';
 
@@ -12,12 +14,12 @@ const organizationSchema = {
   url: MAIN_SITE,
   logo: `${MAIN_SITE}/images/helicoptertours-bluehawaiian.webp`,
   description:
-    'Book Oahu and Hawaii helicopter tours with Blue Hawaiian Helicopters. Submit a request at booking.helicoptertoursonoahu.com or call (707) 381-2583.',
-  telephone: '+1-707-381-2583',
+    `Book Oahu and Hawaii helicopter tours with Blue Hawaiian Helicopters. Submit a request at booking.helicoptertoursonoahu.com or call ${CUSTOMER_PHONE_DISPLAY}.`,
+  telephone: CUSTOMER_PHONE_SCHEMA,
   sameAs: [],
   contactPoint: {
     '@type': 'ContactPoint',
-    telephone: '+1-707-381-2583',
+    telephone: CUSTOMER_PHONE_SCHEMA,
     contactType: 'booking',
     areaServed: 'US-HI',
     availableLanguage: 'English',
@@ -63,7 +65,7 @@ const localBusinessSchema = {
   description:
     'Oahu helicopter tours with Blue Hawaiian Helicopters. Book Hawaii scenic flights—Oahu, Maui, Kauai, Big Island. Safe, scenic, personalized. Book online or call.',
   url: MAIN_SITE,
-  telephone: '+1-707-381-2583',
+  telephone: CUSTOMER_PHONE_SCHEMA,
   address: {
     '@type': 'PostalAddress',
     addressRegion: 'HI',

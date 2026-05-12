@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { VAPI_PHONE_NUMBER } from '@/lib/constants';
+import { VAPI_PHONE_NUMBER, CUSTOMER_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
 import {
   tours,
   getUniqueIslands,
@@ -79,16 +79,7 @@ export default function BookingChatbot() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const islands = getUniqueIslands();
-  const phoneDigits = VAPI_PHONE_NUMBER.replace(/\D/g, '');
-  // Avoid double "1": if number already has US country code (11 digits starting with 1), use as-is; else prepend 1
-  const phoneHref =
-    phoneDigits.length === 11 && phoneDigits.startsWith('1')
-      ? `tel:+${phoneDigits}`
-      : phoneDigits.length === 10
-        ? `tel:+1${phoneDigits}`
-        : phoneDigits
-          ? `tel:+${phoneDigits}`
-          : 'tel:+17073812583';
+  const phoneHref = CUSTOMER_PHONE_TEL;
 
   useEffect(() => {
     scrollToBottom();
@@ -112,7 +103,7 @@ export default function BookingChatbot() {
         {
           role: 'assistant',
           content:
-            "Aloha! Welcome to Helicopter Tours on Oahu. We currently book **Blue Hawaiian Helicopters** scenic flights across Hawaii. Which island would you like to explore?",
+            "Aloha! Welcome to Helicopter Tours on Oahu. We book **Blue Hawaiian Helicopters** scenic flights across Hawaii. **Traveling from abroad?** WhatsApp us anytime—same team, fast replies. Which island would you like to explore?",
           buttons: islands.map((island) => ({ label: island, action: `island_${island}` })),
         },
       ]);
@@ -463,6 +454,18 @@ export default function BookingChatbot() {
               </div>
             </div>
             <div className="flex items-center gap-1">
+              <a
+                href={WHATSAPP_CHAT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                aria-label="WhatsApp us"
+                title="WhatsApp"
+              >
+                <span className="text-lg" aria-hidden>
+                  💬
+                </span>
+              </a>
               <a
                 href={phoneHref}
                 className="w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"

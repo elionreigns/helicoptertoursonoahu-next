@@ -24,3 +24,28 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* FareHarbor CTA pulse — Honolulu partner card (matches marketing site) */
+@keyframes htoFhGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 rgba(255, 193, 7, 0.45),
+      0 14px 40px rgba(13, 71, 161, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 0 10px rgba(255, 193, 7, 0),
+      0 18px 48px rgba(13, 71, 161, 0.5);
+  }
+}
+
+.hto-fh-cta-animate {
+  animation: htoFhGlow 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hto-fh-cta-animate {
+    animation: none;
+  }
+}

@@ -1,6 +1,6 @@
 import 'server-only';
 import nodemailer from 'nodemailer';
-import { emails, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from './constants';
+import { emails, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL, CUSTOMER_PHONE_DISPLAY, CUSTOMER_PHONE_TEL } from './constants';
 
 /** Reply-To for inbound: use env so you can set Resend's free .resend.app address without code change or paying for another domain. Exported for use in API routes that send email directly. */
 export const replyToInbound = () =>
@@ -1265,9 +1265,16 @@ export async function sendAvailabilityFollowUp({
   const dateObj = new Date(date);
   const formattedDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
-  const phone = phoneNumber || '(707) 381-2583';
-  const phoneTel = phone.replace(/\D/g, '');
-  const phoneLink = phoneTel ? `tel:+1${phoneTel}` : 'tel:+17073812583';
+  const phone = phoneNumber || CUSTOMER_PHONE_DISPLAY;
+  const phoneDigits = phone.replace(/\D/g, '');
+  const phoneLink =
+    phoneDigits.length === 11 && phoneDigits.startsWith('1')
+      ? `tel:+${phoneDigits}`
+      : phoneDigits.length === 10
+        ? `tel:+1${phoneDigits}`
+        : phoneDigits
+          ? `tel:+${phoneDigits}`
+          : CUSTOMER_PHONE_TEL;
 
   // Build available slots list (Blue Hawaiian only when we have scraped times)
   let slotsText = '';

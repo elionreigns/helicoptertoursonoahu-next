@@ -92,6 +92,18 @@ export type BookingStatus = typeof bookingStatuses[keyof typeof bookingStatuses]
  */
 export const BOOKING_APP_BASE_URL = "https://booking.helicoptertoursonoahu.com";
 
+/** WhatsApp business chat (same as main site footer / float). Digits only after wa.me/ */
+export const WHATSAPP_NUMBER_DIGITS = "18083930153";
+export const WHATSAPP_CHAT_URL = `https://wa.me/${WHATSAPP_NUMBER_DIGITS}`;
+
+/** Customer voice/SMS line — use everywhere customers should reach you (UI, JSON-LD, emails, chatbot). */
+export const CUSTOMER_PHONE_DISPLAY = "(808) 393-0153";
+export const CUSTOMER_PHONE_E164 = "+18083930153";
+export const CUSTOMER_PHONE_TEL = "tel:+18083930153";
+
+/** schema.org / JSON-LD telephone (with dashes) */
+export const CUSTOMER_PHONE_SCHEMA = "+1-808-393-0153";
+
 /**
  * Vendor passwords for operator reservations page (booking.helicoptertoursonoahu.com/reservations).
  * Operators enter confirmation number + this password to view payment details (viewable 5 min, then destroyed).
@@ -110,6 +122,13 @@ export const VENDOR_PASSWORDS = {
 export const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID || "2ed16509-a321-4f09-84d8-bf1fcfe42438";
 
 /**
- * VAPI Phone Number for Testing
+ * Shown as "call us" in emails and chatbot (kept name for existing imports).
+ * This is your Hawaii booking line — not the old VAPI test DID.
  */
-export const VAPI_PHONE_NUMBER = "+1 (707) 381-2583";
+export const VAPI_PHONE_NUMBER = "+1 (808) 393-0153";
+
+/**
+ * Optional: VAPI AI voice agent DID for internal testing only (admin / docs).
+ */
+export const VAPI_VOICE_AGENT_NUMBER =
+  process.env.VAPI_VOICE_AGENT_NUMBER?.trim() || "+1 (707) 381-2583";

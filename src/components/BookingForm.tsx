@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { tours, getToursByOperator, calculateTotalPrice, type Tour } from '@/lib/tours';
+import { CUSTOMER_PHONE_DISPLAY } from '@/lib/constants';
 
 interface BookingFormData {
   name: string;
@@ -355,7 +356,7 @@ export default function BookingForm() {
               Blue Hawaiian Helicopters
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Archived Rainbow Helicopters marketing is on the main site under pending vendors (partner login). Call (707) 381-2583 for special cases.
+              Archived Rainbow Helicopters marketing is on the main site under pending vendors (partner login). Call {CUSTOMER_PHONE_DISPLAY} for special cases.
             </p>
           </div>
 
