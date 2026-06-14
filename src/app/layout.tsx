@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | Helicopter Tours on Oahu",
   },
   description:
-    `Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Luxury Eco-Star scenic flights—Oahu and neighbor islands. Book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
+    `Book Oahu helicopter tours instantly on FareHarbor (Honolulu Helicopter Tours, live seats from ~$244) or request Blue Hawaiian Eco-Star flights. Call ${CUSTOMER_PHONE_DISPLAY}.`,
   keywords: [
     "helicopter tours on oahu",
     "oahu helicopter tours",
@@ -42,8 +42,15 @@ export const metadata: Metadata = {
     siteName: "Helicopter Tours on Oahu",
     title: "Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online",
     description:
-      `Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Scenic Hawaii helicopter tours—book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
+      `Instant FareHarbor seats or Blue Hawaiian requests for Oahu helicopter tours. Call ${CUSTOMER_PHONE_DISPLAY}.`,
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Helicopter Tours on Oahu" }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online',
+    description:
+      `Instant FareHarbor seats or Blue Hawaiian requests for Oahu helicopter tours. Call ${CUSTOMER_PHONE_DISPLAY}.`,
+    images: [OG_IMAGE],
   },
   robots: {
     index: true,
