@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import HonoluluPartnerCard from '@/components/HonoluluPartnerCard';
-import { FAREHARBOR_HONOLULU_HELICOPTER_TOURS } from '@/lib/partnerLinks';
+import { fareHarborTrackedOutboundUrl } from '@/lib/partnerLinks';
 import { CUSTOMER_PHONE_DISPLAY } from '@/lib/constants';
 
 export const metadata: Metadata = {
@@ -63,7 +63,7 @@ export default function Home() {
               Start Booking
             </Link>
             <a
-              href={FAREHARBOR_HONOLULU_HELICOPTER_TOURS}
+              href={fareHarborTrackedOutboundUrl('booking-hero')}
               target="_blank"
               rel="noopener noreferrer"
               className="hto-fh-cta-animate inline-flex min-h-[48px] max-w-md items-center justify-center gap-2 rounded-xl border-2 border-white/35 bg-gradient-to-r from-orange-500 via-orange-600 to-sky-900 px-6 py-4 text-center text-base font-extrabold text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 sm:text-lg"

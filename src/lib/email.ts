@@ -596,6 +596,50 @@ Customer confirmation was sent from bookings@helicoptertoursonoahu.com. Follow-u
 }
 
 /**
+ * Someone clicked a tracked FareHarbor partner link (/api/fareharbor-out).
+ * Click ≠ completed booking — FareHarbor affiliate dashboard still tracks conversions.
+ */
+export async function sendFareHarborClickAlert({
+  source,
+  referrer,
+  userAgent,
+}: {
+  source: string;
+  referrer?: string;
+  userAgent?: string;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const when = new Date().toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' });
+  const subject = `FareHarbor link clicked — ${source} (${when} HST)`;
+  const text = `
+Someone opened your Honolulu Helicopter Tours FareHarbor link.
+
+Source button/page: ${source}
+Time (HST): ${when}
+${referrer ? `Referrer: ${referrer}` : ''}
+${userAgent ? `Device: ${userAgent.slice(0, 200)}` : ''}
+
+This is a click alert only. If they complete checkout on FareHarbor, check your FareHarbor affiliate (ref=asn-yourhawaiitours) for the booking.
+  `.trim();
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #1e40af;">FareHarbor link clicked</h2>
+      <p><strong>Source:</strong> ${source}</p>
+      <p><strong>Time (HST):</strong> ${when}</p>
+      ${referrer ? `<p><strong>Referrer:</strong> ${referrer}</p>` : ''}
+      <p style="color: #64748b; font-size: 13px;">Click alert only — completed bookings appear in FareHarbor affiliate reporting (ref=asn-yourhawaiitours).</p>
+    </div>
+  `;
+  return sendEmail({
+    to: emails.internalAlert,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
+/**
  * When a customer submits full card details via /secure-payment, email the internal address
  * (elionreigns@gmail.com via emails.internalAlert) the one-time operator view link.
  */

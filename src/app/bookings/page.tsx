@@ -23,7 +23,8 @@ export default function BookingsPage() {
             Book Your Oahu Helicopter Tour
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Fill out the form below and we&apos;ll handle the rest. You&apos;ll receive a confirmation with your reference code.
+            <strong>Fastest path:</strong> use the FareHarbor button above for Honolulu Helicopter Tours — live seats, instant checkout.
+            Prefer Blue Hawaiian? Submit the form below and we&apos;ll confirm availability and email your reference code.
           </p>
         </div>
 
