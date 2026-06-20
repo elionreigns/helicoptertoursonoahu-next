@@ -232,9 +232,14 @@ export async function POST(request: NextRequest) {
           };
 
           console.log('Calling new-booking-request for phone booking...');
+          const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+          const bookHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+          if (bypassSecret) {
+            bookHeaders['x-vercel-protection-bypass'] = bypassSecret;
+          }
           const bookRes = await fetch(`${baseUrl}/api/new-booking-request`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: bookHeaders,
             body: JSON.stringify(bookingPayload),
           });
 
