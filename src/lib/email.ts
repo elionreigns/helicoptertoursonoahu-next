@@ -630,7 +630,7 @@ This is a click alert only. If they complete checkout on FareHarbor, check your 
     </div>
   `;
   return sendEmail({
-    to: emails.internalAlert,
+    to: emails.fareharborAlert,
     subject,
     text,
     html,

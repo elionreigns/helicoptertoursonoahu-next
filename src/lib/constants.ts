@@ -21,6 +21,8 @@ export const emails = {
   bookingsHubInbound: "bookings@booking.helicoptertoursonoahu.com",
   /** Internal alert: notified when a new booking is submitted (never shown to customers) */
   internalAlert: "elionreigns@gmail.com",
+  /** FareHarbor partner button clicks (Honolulu Helicopter Tours) */
+  fareharborAlert: "coralcrowntechnologies@gmail.com",
   testAgent: "ericbelievesinjesusbecause@gmail.com",        // Agent email that handles client communication (for testing)
   testClient: "elionreigns@gmail.com",                      // Client email for testing purposes
   blueHawaiian: "coralcrowntechnologies@gmail.com",         // Blue Hawaiian Helicopters - UPDATE TO REAL EMAIL
@@ -92,17 +94,22 @@ export type BookingStatus = typeof bookingStatuses[keyof typeof bookingStatuses]
  */
 export const BOOKING_APP_BASE_URL = "https://booking.helicoptertoursonoahu.com";
 
-/** WhatsApp business chat (same as main site footer / float). Digits only after wa.me/ */
+/** WhatsApp only — (808) 393-0153. Do not use for tel: voice links. */
 export const WHATSAPP_NUMBER_DIGITS = "18083930153";
 export const WHATSAPP_CHAT_URL = `https://wa.me/${WHATSAPP_NUMBER_DIGITS}`;
+export const WHATSAPP_PHONE_DISPLAY = "(808) 393-0153";
 
-/** Customer voice/SMS line — use everywhere customers should reach you (UI, JSON-LD, emails, chatbot). */
-export const CUSTOMER_PHONE_DISPLAY = "(808) 393-0153";
-export const CUSTOMER_PHONE_E164 = "+18083930153";
-export const CUSTOMER_PHONE_TEL = "tel:+18083930153";
+/** VAPI voice booking line — (707) 381-2583. Use for Call links, JSON-LD, emails, chatbot phone icon. */
+export const VAPI_PHONE_DISPLAY = "+1 (707) 381-2583";
+export const VAPI_PHONE_E164 = "+17073812583";
+export const VAPI_PHONE_TEL = "tel:+17073812583";
+export const VAPI_PHONE_SCHEMA = "+1-707-381-2583";
 
-/** schema.org / JSON-LD telephone (with dashes) */
-export const CUSTOMER_PHONE_SCHEMA = "+1-808-393-0153";
+/** @deprecated Use VAPI_PHONE_* for calls; WHATSAPP_* for WhatsApp only. */
+export const CUSTOMER_PHONE_DISPLAY = VAPI_PHONE_DISPLAY;
+export const CUSTOMER_PHONE_E164 = VAPI_PHONE_E164;
+export const CUSTOMER_PHONE_TEL = VAPI_PHONE_TEL;
+export const CUSTOMER_PHONE_SCHEMA = VAPI_PHONE_SCHEMA;
 
 /**
  * Vendor passwords for operator reservations page (booking.helicoptertoursonoahu.com/reservations).
@@ -119,16 +126,8 @@ export const VENDOR_PASSWORDS = {
  * VAPI Assistant ID for phone agent integration
  * This assistant handles phone calls and collects booking information
  */
-export const VAPI_ASSISTANT_ID = process.env.VAPI_ASSISTANT_ID || "2ed16509-a321-4f09-84d8-bf1fcfe42438";
+export const VAPI_ASSISTANT_ID =
+  process.env.VAPI_ASSISTANT_ID || "a12de0b2-fe4d-4806-b468-d9052ac9ca6d";
 
-/**
- * Shown as "call us" in emails and chatbot (kept name for existing imports).
- * This is your Hawaii booking line — not the old VAPI test DID.
- */
-export const VAPI_PHONE_NUMBER = "+1 (808) 393-0153";
-
-/**
- * Optional: VAPI AI voice agent DID for internal testing only (admin / docs).
- */
-export const VAPI_VOICE_AGENT_NUMBER =
-  process.env.VAPI_VOICE_AGENT_NUMBER?.trim() || "+1 (707) 381-2583";
+/** Shown as "call us" in emails and chatbot (alias of VAPI_PHONE_DISPLAY). */
+export const VAPI_PHONE_NUMBER = VAPI_PHONE_DISPLAY;

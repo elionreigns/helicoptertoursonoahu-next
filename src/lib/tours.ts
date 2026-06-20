@@ -187,38 +187,7 @@ export const tours: Tour[] = [
     description: 'Eco-focused Kauai adventure',
     doorsOff: false,
   },
-  
-  // Rainbow Helicopters - Oahu Tours
-  {
-    id: 'rainbow-oahu-doors-off',
-    name: 'Oahu Doors-Off Adventure',
-    operator: 'rainbow',
-    island: 'Oahu',
-    pricePerPerson: 249,
-    duration: '45 minutes',
-    description: 'Doors-off adventure tour of Oahu',
-    doorsOff: true,
-  },
-  {
-    id: 'rainbow-oahu-scenic',
-    name: 'Oahu Scenic Tour',
-    operator: 'rainbow',
-    island: 'Oahu',
-    pricePerPerson: 229,
-    duration: '40 minutes',
-    description: 'Scenic doors-on tour',
-    doorsOff: false,
-  },
-  {
-    id: 'rainbow-oahu-complete',
-    name: 'Complete Oahu Experience',
-    operator: 'rainbow',
-    island: 'Oahu',
-    pricePerPerson: 299,
-    duration: '60 minutes',
-    description: 'Complete island tour with doors-off option',
-    doorsOff: true,
-  },
+  // Rainbow tours archived — see src/lib/rainbow-tours-archive.ts
 ];
 
 /**

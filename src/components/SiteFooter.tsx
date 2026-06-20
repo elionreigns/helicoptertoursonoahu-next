@@ -1,6 +1,6 @@
 import Link from "next/link";
 import WhatsAppIcon from "./WhatsAppIcon";
-import { WHATSAPP_CHAT_URL } from "@/lib/constants";
+import { WHATSAPP_CHAT_URL, WHATSAPP_PHONE_DISPLAY } from "@/lib/constants";
 
 export default function SiteFooter() {
   return (
@@ -23,7 +23,7 @@ export default function SiteFooter() {
             aria-label="Open WhatsApp chat, plus one eight zero eight three nine three zero one five three"
           >
             <WhatsAppIcon className="w-6 h-6 shrink-0" />
-            <span>WhatsApp +1 808-393-0153</span>
+            <span>WhatsApp +1 {WHATSAPP_PHONE_DISPLAY}</span>
           </Link>
         </div>
         <p className="text-center text-gray-500 text-sm mt-6">

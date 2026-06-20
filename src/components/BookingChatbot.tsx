@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { VAPI_PHONE_NUMBER, CUSTOMER_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
+import { VAPI_PHONE_NUMBER, VAPI_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
 import {
   tours,
   getUniqueIslands,
@@ -79,7 +79,7 @@ export default function BookingChatbot() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const islands = getUniqueIslands();
-  const phoneHref = CUSTOMER_PHONE_TEL;
+  const phoneHref = VAPI_PHONE_TEL;
 
   useEffect(() => {
     scrollToBottom();

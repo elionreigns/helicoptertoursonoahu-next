@@ -1,4 +1,4 @@
-import { fareHarborTrackedOutboundUrl } from "@/lib/partnerLinks";
+import { fareHarborDirectUrl } from "@/lib/partnerLinks";
 
 type Props = {
   /** Slightly tighter vertical rhythm on /bookings */
@@ -88,9 +88,9 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
             </p>
 
             <a
-              href={fareHarborTrackedOutboundUrl("booking-card")}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={fareHarborDirectUrl()}
+              data-fh-src="booking-card"
+              data-fh-book="1"
               className="hto-fh-cta-animate mt-5 inline-flex w-full max-w-md items-center justify-center gap-2 rounded-2xl border-2 border-white/40 bg-gradient-to-r from-orange-500 via-orange-600 to-sky-800 px-5 py-4 text-center text-base font-extrabold text-white shadow-[0_14px_40px_rgba(255,109,0,0.35),0_8px_24px_rgba(21,101,192,0.35)] transition hover:-translate-y-0.5 hover:brightness-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 md:text-lg"
               aria-label="Open FareHarbor to book Honolulu Helicopter Tours with live availability"
             >

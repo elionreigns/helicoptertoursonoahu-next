@@ -80,7 +80,13 @@ export async function POST(request: NextRequest) {
     const refCode = generateRefCode();
 
     // Determine operator preference
-    const operatorKey: 'blueHawaiian' | 'rainbow' = validated.operator_preference || 'blueHawaiian';
+    if (validated.operator_preference === 'rainbow') {
+      return NextResponse.json(
+        { success: false, error: 'Rainbow Helicopters booking is paused. Please choose Blue Hawaiian or call us.' },
+        { status: 400 }
+      );
+    }
+    const operatorKey: 'blueHawaiian' | 'rainbow' = 'blueHawaiian';
     const operator = operators[operatorKey];
 
     // Get tour information for pricing and display
