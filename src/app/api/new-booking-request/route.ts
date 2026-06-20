@@ -4,7 +4,7 @@ import { insertBooking } from '@/lib/supabaseClient';
 import type { BookingsInsert } from '@/lib/database.types';
 import { operators, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { generateCustomerToken } from '@/lib/securePayment';
-import { sendConfirmationToCustomer, sendRainbowAvailabilityInquiry, sendInternalBookingAlert } from '@/lib/email';
+import { sendConfirmationToCustomer, sendInternalBookingAlert, sendClientInteractionAlert } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 
@@ -127,13 +127,8 @@ export async function POST(request: NextRequest) {
       
       // For Blue Hawaiian: if multiple slots available, we could return them to user
       // For now, we'll proceed and include availability in email to operator
-      if (operatorKey === 'blueHawaiian' && availabilityResult.available && availabilityResult.availableSlots) {
+      if (availabilityResult.available && availabilityResult.availableSlots) {
         console.log(`Found ${availabilityResult.availableSlots.length} available time slots`);
-      }
-      
-      // For Rainbow: availability check returns manual check required
-      if (operatorKey === 'rainbow') {
-        console.log('Rainbow Helicopters requires manual availability check - operator will be contacted');
       }
     } catch (error) {
       console.error('Error checking availability (non-blocking):', error);
@@ -219,40 +214,8 @@ export async function POST(request: NextRequest) {
       has_payment: !!validated.payment, // Boolean flag (payment details not included in webhook)
     };
 
-    // Operator email flow:
-    // - Blue Hawaiian: do NOT email operator yet; we scrape live availability and send follow-up to customer.
-    //   When customer replies with chosen time, we then send full booking to Blue Hawaiian (see customer-reply).
-    // - Rainbow: send availability inquiry only ("what times do you have?"); when Rainbow replies with a time,
-    //   we email customer to confirm; when customer confirms, we send full booking to Rainbow (see operator-reply + customer-reply).
-    try {
-      if (operatorKey === 'rainbow') {
-        const inquiryResult = await sendRainbowAvailabilityInquiry({
-          operatorEmail: operator.email,
-          operatorName: operator.name,
-          refCode,
-          customerName: validated.name,
-          preferredDate: validated.preferred_date,
-          partySize: validated.party_size,
-          tourName: tourName,
-          totalWeight: validated.total_weight,
-          doorsOff: validated.doors_off,
-          hotel: validated.hotel,
-        });
-        if (inquiryResult.success) {
-          console.log('Rainbow availability inquiry sent to operator:', operator.email);
-        } else {
-          console.error('Rainbow availability inquiry failed:', inquiryResult.error);
-        }
-        // Resend rate limit: 2 req/sec — delay before next send
-        await new Promise((r) => setTimeout(r, 800));
-      }
-      // Blue Hawaiian: no operator email on booking; operator gets full details when customer confirms a time
-      if (operatorKey === 'blueHawaiian') {
-        console.log('Blue Hawaiian: operator will be emailed when customer confirms a time slot');
-      }
-    } catch (error) {
-      console.error('Error sending operator email:', error);
-    }
+    // Blue Hawaiian: no operator email on booking; operator gets full details when customer confirms a time
+    console.log('Blue Hawaiian: operator will be emailed when customer confirms a time slot');
 
     // Send confirmation email to customer (include secure payment link so they can enter full card details)
     let securePaymentLink: string | undefined;
@@ -306,6 +269,28 @@ export async function POST(request: NextRequest) {
       }
     } catch (error) {
       console.error('Error sending internal booking alert:', error);
+    }
+
+    // Client interaction alert — skip phone (VAPI webhook sends call-level alert with transcript)
+    if (validated.source !== 'phone') {
+      try {
+        const interactionSource = validated.source === 'chatbot' ? 'chatbot' : 'web';
+        const interactionResult = await sendClientInteractionAlert({
+          source: interactionSource,
+          outcome: 'booking_created',
+          customerName: validated.name,
+          customerEmail: validated.email,
+          customerPhone: validated.phone,
+          hotel: validated.hotel,
+          refCode,
+          summary: `Booking ${refCode} — ${operator.name}, ${validated.preferred_date}, party ${validated.party_size}${tourName ? `, ${tourName}` : ''}`,
+        });
+        if (!interactionResult.success) {
+          console.error('Client interaction alert failed:', interactionResult.error);
+        }
+      } catch (error) {
+        console.error('Error sending client interaction alert:', error);
+      }
     }
 
     // Call n8n webhook if configured

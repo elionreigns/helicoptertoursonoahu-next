@@ -23,6 +23,8 @@ export const emails = {
   internalAlert: "elionreigns@gmail.com",
   /** FareHarbor partner button clicks (Honolulu Helicopter Tours) */
   fareharborAlert: "coralcrowntechnologies@gmail.com",
+  /** Every completed client interaction: VAPI calls, chatbot, cart, web form */
+  clientInteractionAlert: "coralcrowntechnologies@gmail.com",
   testAgent: "ericbelievesinjesusbecause@gmail.com",        // Agent email that handles client communication (for testing)
   testClient: "elionreigns@gmail.com",                      // Client email for testing purposes
   blueHawaiian: "coralcrowntechnologies@gmail.com",         // Blue Hawaiian Helicopters - UPDATE TO REAL EMAIL

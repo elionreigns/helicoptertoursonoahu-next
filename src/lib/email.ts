@@ -535,6 +535,249 @@ Helicopter Tours on Oahu
   });
 }
 
+export type ClientInteractionSource = 'vapi' | 'phone' | 'chatbot' | 'cart' | 'web' | 'form';
+
+/**
+ * Notify coralcrowntechnologies@gmail.com after every completed client interaction
+ * (VAPI call end, chatbot submit, cart checkout, web form).
+ */
+export async function sendClientInteractionAlert({
+  source,
+  outcome,
+  customerName,
+  customerEmail,
+  customerPhone,
+  hotel,
+  refCode,
+  callId,
+  durationSeconds,
+  endedReason,
+  transcript,
+  summary,
+  cartItems,
+  totalAmount,
+  itemCount,
+  extra,
+}: {
+  source: ClientInteractionSource;
+  outcome: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  hotel?: string;
+  refCode?: string;
+  callId?: string;
+  durationSeconds?: number;
+  endedReason?: string;
+  transcript?: string;
+  summary?: string;
+  cartItems?: Array<{ name?: string; provider?: string; quantity?: number; price?: number }>;
+  totalAmount?: number;
+  itemCount?: number;
+  extra?: Record<string, unknown>;
+}): Promise<{ success: boolean; messageId?: string; error?: string }> {
+  const when = new Date().toLocaleString('en-US', { timeZone: 'Pacific/Honolulu' });
+  const sourceLabel: Record<ClientInteractionSource, string> = {
+    vapi: 'VAPI Phone Call',
+    phone: 'Phone Booking',
+    chatbot: 'Website Chatbot',
+    cart: 'Shopping Cart',
+    web: 'Web Form',
+    form: 'Booking Form',
+  };
+  const label = sourceLabel[source] || source;
+  const subject = `🚁 New Lead — ${label}${customerName ? ` — ${customerName}` : ''}`;
+
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const outcomeColors: Record<string, { bg: string; border: string; text: string }> = {
+    booking_created: { bg: '#dcfce7', border: '#22c55e', text: '#166534' },
+    cart_submitted: { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' },
+    call_completed: { bg: '#e0e7ff', border: '#6366f1', text: '#3730a3' },
+    spam: { bg: '#fee2e2', border: '#ef4444', text: '#991b1b' },
+    not_a_booking: { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' },
+  };
+  const outcomeStyle = outcomeColors[outcome] ?? { bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e' };
+  const outcomeLabel = outcome.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const sourceIcons: Record<ClientInteractionSource, string> = {
+    vapi: '📞',
+    phone: '📞',
+    chatbot: '💬',
+    cart: '🛒',
+    web: '📝',
+    form: '📝',
+  };
+  const icon = sourceIcons[source] || '🔔';
+
+  const transcriptExcerpt = transcript
+    ? transcript.length > 4000
+      ? `${transcript.slice(0, 4000)}\n\n… [truncated]`
+      : transcript
+    : '';
+
+  let cartText = '';
+  let cartHtml = '';
+  if (cartItems && cartItems.length > 0) {
+    cartText = cartItems
+      .map((item, i) => {
+        const qty = item.quantity ?? 1;
+        const price = item.price ?? 0;
+        return `${i + 1}. ${item.name || 'Tour'} (${item.provider || 'N/A'}) — ${qty} × $${price.toFixed(2)}`;
+      })
+      .join('\n');
+    cartHtml = cartItems
+      .map((item) => {
+        const qty = item.quantity ?? 1;
+        const price = item.price ?? 0;
+        const lineTotal = qty * price;
+        return `
+          <tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;">
+              <strong style="color:#0066cc;">${escapeHtml(item.name || 'Tour')}</strong><br>
+              <span style="color:#64748b;font-size:13px;">${escapeHtml(item.provider || 'N/A')}</span>
+            </td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;text-align:center;">${qty}</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;text-align:right;">$${price.toFixed(2)}</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600;">$${lineTotal.toFixed(2)}</td>
+          </tr>`;
+      })
+      .join('');
+  }
+
+  const phoneDigits = customerPhone?.replace(/\D/g, '') ?? '';
+  const phoneTel = phoneDigits ? (phoneDigits.length === 10 ? `tel:+1${phoneDigits}` : `tel:+${phoneDigits}`) : '';
+
+  const text = `
+New client interaction on Helicopter Tours on Oahu.
+
+Source: ${label}
+Outcome: ${outcomeLabel}
+Time (HST): ${when}
+${customerName ? `Name: ${customerName}` : ''}
+${customerEmail ? `Email: ${customerEmail}` : ''}
+${customerPhone ? `Phone: ${customerPhone}` : ''}
+${hotel ? `Hotel: ${hotel}` : ''}
+${refCode ? `Reference: ${refCode}` : ''}
+${callId ? `Call ID: ${callId}` : ''}
+${durationSeconds != null ? `Duration: ${durationSeconds}s` : ''}
+${endedReason ? `Ended: ${endedReason}` : ''}
+${itemCount != null ? `Cart items: ${itemCount}` : ''}
+${totalAmount != null ? `Cart total: $${totalAmount.toFixed(2)}` : ''}
+${summary ? `\nSummary:\n${summary}` : ''}
+${cartText ? `\nCart:\n${cartText}` : ''}
+${transcriptExcerpt ? `\nTranscript:\n${transcriptExcerpt}` : ''}
+  `.trim();
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef2f7;padding:24px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#0066cc 0%,#00a8e8 100%);padding:28px 32px;color:#ffffff;">
+            <p style="margin:0 0 6px 0;font-size:13px;opacity:0.9;letter-spacing:0.5px;text-transform:uppercase;">Helicopter Tours on Oahu</p>
+            <h1 style="margin:0;font-size:24px;font-weight:700;">${icon} New Client Interaction</h1>
+            <p style="margin:10px 0 0 0;font-size:15px;opacity:0.95;">${escapeHtml(label)} · ${escapeHtml(when)} HST</p>
+          </td>
+        </tr>
+        <!-- Outcome badge -->
+        <tr>
+          <td style="padding:20px 32px 0 32px;">
+            <span style="display:inline-block;background:${outcomeStyle.bg};color:${outcomeStyle.text};border:2px solid ${outcomeStyle.border};border-radius:20px;padding:6px 16px;font-size:13px;font-weight:700;letter-spacing:0.3px;">${escapeHtml(outcomeLabel)}</span>
+            ${refCode ? `<span style="display:inline-block;margin-left:8px;background:#f1f5f9;color:#334155;border-radius:20px;padding:6px 16px;font-size:13px;font-weight:600;">Ref: ${escapeHtml(refCode)}</span>` : ''}
+          </td>
+        </tr>
+        <!-- Customer card -->
+        ${customerName || customerEmail || customerPhone || hotel ? `
+        <tr>
+          <td style="padding:20px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:10px;border-left:4px solid #0066cc;">
+              <tr><td style="padding:20px 24px;">
+                <h2 style="margin:0 0 14px 0;font-size:16px;color:#0066cc;text-transform:uppercase;letter-spacing:0.5px;">Contact Details</h2>
+                ${customerName ? `<p style="margin:0 0 8px 0;font-size:15px;"><strong>Name:</strong> ${escapeHtml(customerName)}</p>` : ''}
+                ${customerEmail ? `<p style="margin:0 0 8px 0;font-size:15px;"><strong>Email:</strong> <a href="mailto:${escapeHtml(customerEmail)}" style="color:#0066cc;">${escapeHtml(customerEmail)}</a></p>` : ''}
+                ${customerPhone ? `<p style="margin:0 0 8px 0;font-size:15px;"><strong>Phone:</strong> <a href="${phoneTel}" style="color:#0066cc;font-weight:600;">${escapeHtml(customerPhone)}</a></p>` : ''}
+                ${hotel ? `<p style="margin:0;font-size:15px;"><strong>Hotel:</strong> ${escapeHtml(hotel)}</p>` : ''}
+              </td></tr>
+            </table>
+          </td>
+        </tr>` : ''}
+        <!-- Summary -->
+        ${summary ? `
+        <tr>
+          <td style="padding:0 32px 20px 32px;">
+            <h2 style="margin:0 0 10px 0;font-size:16px;color:#334155;">Summary</h2>
+            <p style="margin:0;font-size:15px;color:#475569;line-height:1.6;">${escapeHtml(summary)}</p>
+          </td>
+        </tr>` : ''}
+        <!-- Call metadata -->
+        ${callId || durationSeconds != null || endedReason ? `
+        <tr>
+          <td style="padding:0 32px 20px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4ff;border-radius:8px;">
+              <tr><td style="padding:16px 20px;">
+                <h2 style="margin:0 0 10px 0;font-size:14px;color:#3730a3;">📞 Call Details</h2>
+                ${callId ? `<p style="margin:0 0 6px 0;font-size:13px;color:#475569;"><strong>Call ID:</strong> ${escapeHtml(callId)}</p>` : ''}
+                ${durationSeconds != null ? `<p style="margin:0 0 6px 0;font-size:13px;color:#475569;"><strong>Duration:</strong> ${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s</p>` : ''}
+                ${endedReason ? `<p style="margin:0;font-size:13px;color:#475569;"><strong>Ended:</strong> ${escapeHtml(endedReason)}</p>` : ''}
+              </td></tr>
+            </table>
+          </td>
+        </tr>` : ''}
+        <!-- Cart table -->
+        ${cartHtml ? `
+        <tr>
+          <td style="padding:0 32px 20px 32px;">
+            <h2 style="margin:0 0 12px 0;font-size:16px;color:#334155;">🛒 Cart (${itemCount ?? cartItems?.length ?? 0} items)</h2>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+              <tr style="background:#f1f5f9;">
+                <th style="padding:10px 16px;text-align:left;font-size:12px;color:#64748b;text-transform:uppercase;">Tour</th>
+                <th style="padding:10px 16px;text-align:center;font-size:12px;color:#64748b;text-transform:uppercase;">Qty</th>
+                <th style="padding:10px 16px;text-align:right;font-size:12px;color:#64748b;text-transform:uppercase;">Price</th>
+                <th style="padding:10px 16px;text-align:right;font-size:12px;color:#64748b;text-transform:uppercase;">Total</th>
+              </tr>
+              ${cartHtml}
+            </table>
+            ${totalAmount != null ? `<p style="margin:14px 0 0 0;text-align:right;font-size:18px;font-weight:700;color:#0066cc;">Cart Total: $${totalAmount.toFixed(2)}</p>` : ''}
+          </td>
+        </tr>` : ''}
+        <!-- Transcript -->
+        ${transcriptExcerpt ? `
+        <tr>
+          <td style="padding:0 32px 24px 32px;">
+            <h2 style="margin:0 0 10px 0;font-size:16px;color:#334155;">💬 Call Transcript</h2>
+            <div style="background:#1e293b;color:#e2e8f0;padding:16px 20px;border-radius:8px;font-size:13px;line-height:1.7;white-space:pre-wrap;font-family:Consolas,Monaco,monospace;max-height:320px;overflow-y:auto;">${escapeHtml(transcriptExcerpt)}</div>
+          </td>
+        </tr>` : ''}
+        <!-- Footer -->
+        <tr>
+          <td style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
+            <p style="margin:0 0 6px 0;font-size:13px;color:#64748b;">This alert was sent automatically from <strong>booking.helicoptertoursonoahu.com</strong></p>
+            <p style="margin:0;font-size:12px;color:#94a3b8;">Reply to this email or contact the client directly to follow up.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return sendEmail({
+    to: emails.clientInteractionAlert,
+    subject,
+    text,
+    html,
+    from: emails.bookingsHub,
+    replyTo: replyToInbound(),
+  });
+}
+
 /**
  * Notify internal alert address that a new booking was submitted (never shown to customers).
  * Customer-facing confirmation and follow-up all go from bookings@helicoptertoursonoahu.com.
