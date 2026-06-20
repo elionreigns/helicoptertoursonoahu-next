@@ -568,7 +568,7 @@ export async function sendClientInteractionAlert({
   refCode?: string;
   callId?: string;
   durationSeconds?: number;
-  endedReason?: string;
+  endedReason?: string | number;
   transcript?: string;
   summary?: string;
   cartItems?: Array<{ name?: string; provider?: string; quantity?: number; price?: number }>;
@@ -587,6 +587,7 @@ export async function sendClientInteractionAlert({
   };
   const label = sourceLabel[source] || source;
   const subject = `🚁 New Lead — ${label}${customerName ? ` — ${customerName}` : ''}`;
+  const endedReasonText = endedReason != null ? String(endedReason) : undefined;
 
   const escapeHtml = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -662,7 +663,7 @@ ${hotel ? `Hotel: ${hotel}` : ''}
 ${refCode ? `Reference: ${refCode}` : ''}
 ${callId ? `Call ID: ${callId}` : ''}
 ${durationSeconds != null ? `Duration: ${durationSeconds}s` : ''}
-${endedReason ? `Ended: ${endedReason}` : ''}
+${endedReasonText ? `Ended: ${endedReasonText}` : ''}
 ${itemCount != null ? `Cart items: ${itemCount}` : ''}
 ${totalAmount != null ? `Cart total: $${totalAmount.toFixed(2)}` : ''}
 ${summary ? `\nSummary:\n${summary}` : ''}
@@ -725,7 +726,7 @@ ${transcriptExcerpt ? `\nTranscript:\n${transcriptExcerpt}` : ''}
                 <h2 style="margin:0 0 10px 0;font-size:14px;color:#3730a3;">📞 Call Details</h2>
                 ${callId ? `<p style="margin:0 0 6px 0;font-size:13px;color:#475569;"><strong>Call ID:</strong> ${escapeHtml(callId)}</p>` : ''}
                 ${durationSeconds != null ? `<p style="margin:0 0 6px 0;font-size:13px;color:#475569;"><strong>Duration:</strong> ${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s</p>` : ''}
-                ${endedReason ? `<p style="margin:0;font-size:13px;color:#475569;"><strong>Ended:</strong> ${escapeHtml(endedReason)}</p>` : ''}
+                ${endedReasonText ? `<p style="margin:0;font-size:13px;color:#475569;"><strong>Ended:</strong> ${escapeHtml(endedReasonText)}</p>` : ''}
               </td></tr>
             </table>
           </td>

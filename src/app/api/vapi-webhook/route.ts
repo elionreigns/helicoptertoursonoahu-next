@@ -52,7 +52,30 @@ export async function GET() {
   });
 }
 
+function asString(value: unknown): string | undefined {
+  if (value == null) return undefined;
+  return typeof value === 'string' ? value : String(value);
+}
+
 export async function POST(request: NextRequest) {
+  let fullTranscript = '';
+  let callerPhone: string | undefined;
+  let callId: string | undefined;
+  let durationSeconds: number | undefined;
+  let endedReason: string | undefined;
+  let outcome = 'webhook_error';
+  let refCode: string | undefined;
+  let customerName: string | undefined;
+  let customerEmail: string | undefined;
+  let summary: string | undefined;
+  let responsePayload: Record<string, unknown> = {
+    success: false,
+    action: 'end_call',
+    message: 'I apologize, but we encountered an issue. Please call back or visit our website. Thank you for calling Helicopter Tours on Oahu!',
+    error: 'Internal server error',
+  };
+  let httpStatus = 500;
+
   try {
     const webhookSecret = process.env.VAPI_WEBHOOK_SECRET?.trim();
     if (webhookSecret) {
@@ -102,8 +125,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let fullTranscript = transcript || '';
-    if (conversation && conversation.length > 0) {
+    fullTranscript = transcript || '';
+    if (Array.isArray(conversation) && conversation.length > 0) {
       fullTranscript = conversation
         .map((msg: { role: string; content: string }) => `${msg.role}: ${msg.content}`)
         .join('\n');
@@ -117,17 +140,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const callerPhone = call?.customer?.number || call?.phoneNumber || undefined;
-    const callId = call?.id;
-    const durationSeconds = call?.duration;
-    const endedReason = call?.endedReason || call?.status || eventType;
-
-    let outcome = 'call_completed';
-    let refCode: string | undefined;
-    let customerName: string | undefined;
-    let customerEmail: string | undefined;
-    let summary: string | undefined;
-    let responsePayload: Record<string, unknown> = {
+    callerPhone = call?.customer?.number || call?.phoneNumber || undefined;
+    callId = call?.id;
+    durationSeconds = typeof call?.duration === 'number' ? call.duration : undefined;
+    endedReason = asString(call?.endedReason) || asString(call?.status) || asString(eventType);
+    outcome = 'call_completed';
+    httpStatus = 200;
+    responsePayload = {
       success: true,
       action: 'end_call',
       message: 'Thank you for calling Helicopter Tours on Oahu. Have a great day!',
@@ -219,7 +238,17 @@ export async function POST(request: NextRequest) {
             body: JSON.stringify(bookingPayload),
           });
 
-          const bookResult = await bookRes.json();
+          let bookResult: { success?: boolean; ref_code?: string; error?: string; booking?: { id?: string } } = {};
+          try {
+            bookResult = await bookRes.json();
+          } catch (parseErr) {
+            const snippet = await bookRes.text().catch(() => '');
+            bookResult = {
+              success: false,
+              error: `Booking API returned non-JSON (${bookRes.status}): ${snippet.slice(0, 120)}`,
+            };
+            console.error('new-booking-request JSON parse error:', parseErr);
+          }
 
           if (!bookResult.success || !bookResult.ref_code) {
             outcome = 'booking_failed';
@@ -251,31 +280,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Alert on every completed VAPI interaction
-    try {
-      const alertResult = await sendClientInteractionAlert({
-        source: 'vapi',
-        outcome,
-        customerName,
-        customerEmail,
-        customerPhone: callerPhone,
-        refCode,
-        callId,
-        durationSeconds,
-        endedReason,
-        transcript: fullTranscript,
-        summary,
-      });
-      if (!alertResult.success) {
-        console.error('VAPI client interaction alert failed:', alertResult.error);
-      }
-    } catch (alertErr) {
-      console.error('Error sending VAPI client interaction alert:', alertErr);
-    }
-
-    return NextResponse.json(responsePayload);
+    return NextResponse.json(responsePayload, { status: httpStatus });
   } catch (error) {
     console.error('VAPI webhook error:', error);
+    summary = error instanceof Error ? error.message : 'Unknown webhook error';
+    outcome = 'webhook_error';
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -288,14 +297,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(
-      {
-        success: false,
-        action: 'end_call',
-        message: 'I apologize, but we encountered an issue. Please call back or visit our website. Thank you for calling Helicopter Tours on Oahu!',
-        error: 'Internal server error',
-      },
-      { status: 500 }
-    );
+    responsePayload = {
+      success: false,
+      action: 'end_call',
+      message: 'I apologize, but we encountered an issue. Please call back or visit our website. Thank you for calling Helicopter Tours on Oahu!',
+      error: 'Internal server error',
+    };
+    httpStatus = 500;
+  } finally {
+    if (fullTranscript.trim()) {
+      try {
+        const alertResult = await sendClientInteractionAlert({
+          source: 'vapi',
+          outcome,
+          customerName,
+          customerEmail,
+          customerPhone: callerPhone,
+          refCode,
+          callId,
+          durationSeconds,
+          endedReason,
+          transcript: fullTranscript,
+          summary,
+        });
+        if (!alertResult.success) {
+          console.error('VAPI client interaction alert failed:', alertResult.error);
+        }
+      } catch (alertErr) {
+        console.error('Error sending VAPI client interaction alert:', alertErr);
+      }
+    }
   }
+
+  return NextResponse.json(responsePayload, { status: httpStatus });
 }
