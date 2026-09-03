@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { VAPI_PHONE_NUMBER, VAPI_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
+import { FAREHARBOR_PRIVATE_18, FAREHARBOR_PRIVATE_30, FAREHARBOR_PRIVATE_60, FAREHARBOR_PRIVATE_ALL } from '@/lib/partnerLinks';
 import {
   tours,
   getUniqueIslands,
@@ -14,7 +15,7 @@ import {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-  buttons?: { label: string; action: string }[];
+  buttons?: { label: string; action: string; href?: string }[];
 }
 
 interface BookingData {
@@ -103,8 +104,14 @@ export default function BookingChatbot() {
         {
           role: 'assistant',
           content:
-            "Aloha! Welcome to Helicopter Tours on Oahu. We book **Blue Hawaiian Helicopters** scenic flights across Hawaii. **Traveling from abroad?** WhatsApp us anytime—same team, fast replies. Which island would you like to explore?",
-          buttons: islands.map((island) => ({ label: island, action: `island_${island}` })),
+            "Aloha! For live luxury private flights, use the private-booking button below. For regular Blue Hawaiian shared flights, I can capture your details for our team to confirm by phone. Which island would you like to explore?",
+          buttons: [
+            { label: 'Book Private Helicopter Here', action: 'private_all', href: FAREHARBOR_PRIVATE_ALL },
+            { label: 'Private 18 min', action: 'private_18', href: FAREHARBOR_PRIVATE_18 },
+            { label: 'Private 30 min', action: 'private_30', href: FAREHARBOR_PRIVATE_30 },
+            { label: 'Private 60 min', action: 'private_60', href: FAREHARBOR_PRIVATE_60 },
+            ...islands.map((island) => ({ label: `Blue Hawaiian: ${island}`, action: `island_${island}` })),
+          ],
         },
       ]);
     }
@@ -114,7 +121,7 @@ export default function BookingChatbot() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const addMessage = (role: 'user' | 'assistant', content: string, buttons?: { label: string; action: string }[]) => {
+  const addMessage = (role: 'user' | 'assistant', content: string, buttons?: { label: string; action: string; href?: string }[]) => {
     setMessages((prev) => [...prev, { role, content, buttons }]);
   };
 
@@ -507,7 +514,15 @@ export default function BookingChatbot() {
                     </div>
                     {msg.buttons && msg.buttons.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {msg.buttons.map((btn) => (
+                        {msg.buttons.map((btn) => btn.href ? (
+                          <a
+                            key={btn.action}
+                            href={btn.href}
+                            className="fareharbor-lightframe px-3 py-1.5 rounded-full bg-amber-200 text-slate-900 text-xs font-bold hover:bg-amber-300 transition-colors"
+                          >
+                            {btn.label}
+                          </a>
+                        ) : (
                           <button
                             key={btn.action}
                             onClick={() => handleAction(btn.action)}

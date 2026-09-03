@@ -7,6 +7,7 @@ import { generateCustomerToken } from '@/lib/securePayment';
 import { bookingStatuses, emails, isOperatorOrInternalEmail, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { getTourById } from '@/lib/tours';
 import { isBlueHawaiianLeadRoutingEnabled } from '@/lib/blueHawaiianLeadRouting';
+import { isPaymentCaptureEnabled } from '@/lib/paymentCapture';
 
 const requestSchema = z.object({
   bookingId: z.string().uuid().optional(),
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
         const hasSecurePayment = !!(meta.secure_payment_received_at as string | undefined);
         let securePaymentLink: string | undefined;
         try {
-          if (process.env.PAYMENT_LINK_SECRET && booking.ref_code) {
+          if (isPaymentCaptureEnabled() && process.env.PAYMENT_LINK_SECRET && booking.ref_code) {
             const baseUrl = BOOKING_APP_BASE_URL;
             securePaymentLink = `${baseUrl.replace(/\/$/, '')}/secure-payment?ref=${encodeURIComponent(booking.ref_code)}&token=${encodeURIComponent(generateCustomerToken(booking.ref_code))}`;
           }
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
         const hasSecurePayment = !!(meta.secure_payment_received_at as string | undefined);
         let securePaymentLink: string | undefined;
         try {
-          if (process.env.PAYMENT_LINK_SECRET && booking.ref_code) {
+          if (isPaymentCaptureEnabled() && process.env.PAYMENT_LINK_SECRET && booking.ref_code) {
             const baseUrl = BOOKING_APP_BASE_URL;
             securePaymentLink = `${baseUrl.replace(/\/$/, '')}/secure-payment?ref=${encodeURIComponent(booking.ref_code)}&token=${encodeURIComponent(generateCustomerToken(booking.ref_code))}`;
           }

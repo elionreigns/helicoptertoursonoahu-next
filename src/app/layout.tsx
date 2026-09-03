@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
@@ -78,6 +79,7 @@ export default function RootLayout({
         <SiteFooter />
         <WhatsAppFloat />
         <BookingChatbot />
+        <Script src="https://fareharbor.com/embeds/api/v1/?autolightframe=yes" strategy="afterInteractive" />
         {/* Fixed Home Button - positioned above chatbot */}
         <div className="fixed bottom-28 right-6 z-40">
           <Link

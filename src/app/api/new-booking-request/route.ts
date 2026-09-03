@@ -8,6 +8,7 @@ import { sendConfirmationToCustomer, sendInternalBookingAlert, sendClientInterac
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 import { isBlueHawaiianLeadRoutingEnabled } from '@/lib/blueHawaiianLeadRouting';
+import { isPaymentCaptureEnabled } from '@/lib/paymentCapture';
 
 export const maxDuration = 30;
 
@@ -218,7 +219,7 @@ export async function POST(request: NextRequest) {
     // Send confirmation email to customer (include secure payment link so they can enter full card details)
     let securePaymentLink: string | undefined;
     try {
-      securePaymentLink = process.env.PAYMENT_LINK_SECRET
+      securePaymentLink = isPaymentCaptureEnabled() && process.env.PAYMENT_LINK_SECRET
         ? `${BOOKING_APP_BASE_URL.replace(/\/$/, '')}/secure-payment?ref=${encodeURIComponent(refCode)}&token=${encodeURIComponent(generateCustomerToken(refCode))}`
         : undefined;
     } catch {

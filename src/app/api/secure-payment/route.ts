@@ -4,9 +4,18 @@ import { supabase, getBookingByRefCode, updateBooking } from '@/lib/supabaseClie
 import { verifyCustomerToken, encryptPayload, generateCustomerToken, generateOperatorToken } from '@/lib/securePayment';
 import { sendSecurePaymentOperatorLinkToInternal } from '@/lib/email';
 import { BOOKING_APP_BASE_URL } from '@/lib/constants';
+import { isPaymentCaptureEnabled } from '@/lib/paymentCapture';
+
+function paymentCaptureDisabled() {
+  return NextResponse.json(
+    { success: false, error: 'Secure payment collection is not enabled. Contact the booking team for the approved payment link.' },
+    { status: 503 }
+  );
+}
 
 /** GET /api/secure-payment?ref=HTO-XXXXXX — Return token for ref-only entry (customer enters confirmation number). */
 export async function GET(request: NextRequest) {
+  if (!isPaymentCaptureEnabled()) return paymentCaptureDisabled();
   const ref = request.nextUrl.searchParams.get('ref');
   if (!ref || !/^HTO-[A-Z0-9]{6}$/.test(ref)) {
     return NextResponse.json({ valid: false, error: 'Invalid confirmation number' }, { status: 400 });
@@ -36,6 +45,7 @@ const securePaymentSchema = z.object({
  * Requires secure_payments table in Supabase (run supabase-secure-payments.sql).
  */
 export async function POST(request: NextRequest) {
+  if (!isPaymentCaptureEnabled()) return paymentCaptureDisabled();
   try {
     const body = await request.json();
     const validated = securePaymentSchema.parse(body);
