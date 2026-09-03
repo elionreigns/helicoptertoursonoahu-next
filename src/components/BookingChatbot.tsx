@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { VAPI_PHONE_NUMBER, VAPI_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
-import { FAREHARBOR_PRIVATE_18, FAREHARBOR_PRIVATE_30, FAREHARBOR_PRIVATE_60, FAREHARBOR_PRIVATE_ALL } from '@/lib/partnerLinks';
 import {
   tours,
   getUniqueIslands,
@@ -106,10 +105,7 @@ export default function BookingChatbot() {
           content:
             "Aloha! For live luxury private flights, use the private-booking button below. For regular Blue Hawaiian shared flights, I can capture your details for our team to confirm by phone. Which island would you like to explore?",
           buttons: [
-            { label: 'Book Private Helicopter Here', action: 'private_all', href: FAREHARBOR_PRIVATE_ALL },
-            { label: 'Private 18 min', action: 'private_18', href: FAREHARBOR_PRIVATE_18 },
-            { label: 'Private 30 min', action: 'private_30', href: FAREHARBOR_PRIVATE_30 },
-            { label: 'Private 60 min', action: 'private_60', href: FAREHARBOR_PRIVATE_60 },
+            { label: 'Book Private Helicopter Here', action: 'private_flights', href: '/p' },
             ...islands.map((island) => ({ label: `Blue Hawaiian: ${island}`, action: `island_${island}` })),
           ],
         },
@@ -190,9 +186,9 @@ export default function BookingChatbot() {
       addMessage('user', tour.name);
       addMessage(
         'assistant',
-        `${tour.name}\n\n${desc}\n\nDuration: ${tour.duration || '—'}\nPrice: $${price} per person${tour.doorsOff ? ' (doors-off option)' : ''}.\n\nWould you like to book this tour or chat more?`,
+        `${tour.name}\n\n${desc}\n\nDuration: ${tour.duration || '—'}\nStarting from: $${price} per person${tour.doorsOff ? ' (doors-off option)' : ''}. Final pricing and availability are confirmed by Blue Hawaiian.\n\nWould you like to request this tour or chat more?`,
         [
-          { label: 'Book this tour', action: 'book_tour' },
+          { label: 'Request this tour', action: 'book_tour' },
           { label: 'Chat more', action: 'chat_more' },
         ]
       );
@@ -518,7 +514,7 @@ export default function BookingChatbot() {
                           <a
                             key={btn.action}
                             href={btn.href}
-                            className="fareharbor-lightframe px-3 py-1.5 rounded-full bg-amber-200 text-slate-900 text-xs font-bold hover:bg-amber-300 transition-colors"
+                            className="px-3 py-1.5 rounded-full bg-amber-200 text-slate-900 text-xs font-bold hover:bg-amber-300 transition-colors"
                           >
                             {btn.label}
                           </a>

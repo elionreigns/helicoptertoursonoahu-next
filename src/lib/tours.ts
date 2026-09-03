@@ -17,7 +17,8 @@ export interface Tour {
 
 /**
  * Tour catalog with pricing
- * Prices are approximate - verify with operator for current rates
+ * Oahu rates were checked against Blue Hawaiian's official Oahu tours page
+ * on 2026-09-02. They are starting rates, not a live quote or availability.
  */
 export const tours: Tour[] = [
   // Blue Hawaiian - Oahu Tours
@@ -26,9 +27,9 @@ export const tours: Tour[] = [
     name: 'Blue Skies of Oahu',
     operator: 'blueHawaiian',
     island: 'Oahu',
-    pricePerPerson: 299,
-    duration: '45-50 minutes',
-    description: 'Scenic flight over Oahu\'s most beautiful locations',
+    pricePerPerson: 399,
+    duration: 'Approx. 50 minutes',
+    description: 'A Honolulu departure over Oahu\'s rainforest valleys, historic sights, and vivid coral reefs.',
     doorsOff: false,
   },
   {
@@ -36,9 +37,9 @@ export const tours: Tour[] = [
     name: 'Complete Island Oahu',
     operator: 'blueHawaiian',
     island: 'Oahu',
-    pricePerPerson: 399,
-    duration: '60-65 minutes',
-    description: 'Complete island tour covering all major landmarks',
+    pricePerPerson: 475,
+    duration: 'Approx. 1 hour 5 minutes',
+    description: 'A Honolulu departure covering Pearl Harbor, the Arizona Memorial, coastlines, valleys, and coral reefs.',
     doorsOff: false,
   },
   {
@@ -46,19 +47,19 @@ export const tours: Tour[] = [
     name: 'Oahu Air Adventure',
     operator: 'blueHawaiian',
     island: 'Oahu',
-    pricePerPerson: 349,
-    duration: '50-55 minutes',
-    description: 'Adventure tour with doors-off option available',
-    doorsOff: true,
+    pricePerPerson: 499,
+    duration: 'Approx. 50 minutes',
+    description: 'A Turtle Bay departure over North Shore scenery, the Waianae Mountains, and historic Pearl Harbor.',
+    doorsOff: false,
   },
   {
     id: 'bhh-oahu-north-shore',
     name: 'Discover North Shore',
     operator: 'blueHawaiian',
     island: 'Oahu',
-    pricePerPerson: 329,
-    duration: '45-50 minutes',
-    description: 'Explore the famous North Shore beaches and surf spots',
+    pricePerPerson: 349,
+    duration: 'Approx. 30 minutes',
+    description: 'A Turtle Bay departure over North Shore landmarks including Pipeline, Sunset, Shark\'s Cove, and Waimea Bay.',
     doorsOff: false,
   },
   {
