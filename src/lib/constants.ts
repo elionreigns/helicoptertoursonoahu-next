@@ -17,16 +17,16 @@
  */
 export const emails = {
   bookingsHub: "bookings@helicoptertoursonoahu.com",        // Main incoming email hub - used for From when sending
-  /** Reply-To for all outgoing emails so replies go here; set to subdomain where Resend Inbound receives (e.g. booking.helicoptertoursonoahu.com) */
-  bookingsHubInbound: "bookings@booking.helicoptertoursonoahu.com",
+  /** Reply-To fallback for all outgoing email. The Vercel REPLY_TO_INBOUND setting may override this only when an inbound provider is intentionally configured. */
+  bookingsHubInbound: "bookings@helicoptertoursonoahu.com",
   /** Internal alert: notified when a new booking is submitted (never shown to customers) */
-  internalAlert: "elionreigns@gmail.com",
+  internalAlert: "coralcrowntechnologies@gmail.com",
   /** FareHarbor partner button clicks (Honolulu Helicopter Tours) */
   fareharborAlert: "coralcrowntechnologies@gmail.com",
   /** Every completed client interaction: VAPI calls, chatbot, cart, web form */
   clientInteractionAlert: "coralcrowntechnologies@gmail.com",
   testAgent: "ericbelievesinjesusbecause@gmail.com",        // Agent email that handles client communication (for testing)
-  testClient: "elionreigns@gmail.com",                      // Client email for testing purposes
+  testClient: "coralcrowntechnologies@gmail.com",           // Internal test destination; never customer-facing
   blueHawaiian: "coralcrowntechnologies@gmail.com",         // Blue Hawaiian Helicopters - UPDATE TO REAL EMAIL
   rainbow: "ashleydanielleschaefer@gmail.com",              // Rainbow Helicopters - UPDATE TO REAL EMAIL
   // Add more operators here, e.g.:

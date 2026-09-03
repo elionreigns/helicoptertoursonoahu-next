@@ -32,6 +32,8 @@ export default function SiteFooter() {
           </Link>
           {" · "}
           Booking on this site is hosted on Vercel and secured with industry-standard transport (HTTPS).
+          {" · "}
+          <Link href="/terms" className="text-blue-600 hover:underline">Terms &amp; payment responsibility</Link>
         </p>
       </div>
     </footer>

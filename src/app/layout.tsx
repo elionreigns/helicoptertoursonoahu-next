@@ -25,12 +25,14 @@ export const metadata: Metadata = {
     template: "%s | Helicopter Tours on Oahu",
   },
   description:
-    `Book Oahu helicopter tours instantly on FareHarbor (Honolulu Helicopter Tours, live seats from ~$244) or request Blue Hawaiian Eco-Star flights. Call ${CUSTOMER_PHONE_DISPLAY}.`,
+    `Book private Oahu helicopter flights with live FareHarbor availability, or request a Blue Hawaiian shared flight. Call ${CUSTOMER_PHONE_DISPLAY}.`,
   keywords: [
     "helicopter tours on oahu",
     "oahu helicopter tours",
     "hawaii helicopter tours",
     "Blue Hawaiian Helicopters",
+    "private helicopter flights Hawaii",
+    "private helicopter tours Oahu",
     "Oahu helicopter tour booking",
     "helicopter tour Oahu",
   ],
@@ -43,14 +45,14 @@ export const metadata: Metadata = {
     siteName: "Helicopter Tours on Oahu",
     title: "Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online",
     description:
-      `Instant FareHarbor seats or Blue Hawaiian requests for Oahu helicopter tours. Call ${CUSTOMER_PHONE_DISPLAY}.`,
+      `Private Oahu helicopter flights with live FareHarbor booking, plus Blue Hawaiian shared-flight requests. Call ${CUSTOMER_PHONE_DISPLAY}.`,
     images: [{ url: OG_IMAGE, width: 1200, height: 630, alt: "Helicopter Tours on Oahu" }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online',
     description:
-      `Instant FareHarbor seats or Blue Hawaiian requests for Oahu helicopter tours. Call ${CUSTOMER_PHONE_DISPLAY}.`,
+      `Private Oahu helicopter flights with live FareHarbor booking, plus Blue Hawaiian shared-flight requests. Call ${CUSTOMER_PHONE_DISPLAY}.`,
     images: [OG_IMAGE],
   },
   robots: {

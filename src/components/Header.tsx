@@ -37,6 +37,12 @@ export default function Header() {
               Home
             </Link>
             <Link
+              href="/private-helicopter-flights-hawaii"
+              className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+            >
+              Private Flights
+            </Link>
+            <Link
               href="/bookings"
               className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
             >
@@ -113,6 +119,13 @@ export default function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Home
+              </Link>
+              <Link
+                href="/private-helicopter-flights-hawaii"
+                className="px-4 py-2 text-gray-700 hover:bg-gray-50 rounded-md transition-colors font-medium"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Private Flights
               </Link>
               <Link
                 href="/bookings"

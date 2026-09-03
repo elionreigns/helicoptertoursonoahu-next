@@ -1,6 +1,6 @@
 import BookingForm from '@/components/BookingForm';
-import HonoluluPartnerCard from '@/components/HonoluluPartnerCard';
 import type { Metadata } from 'next';
+import { FAREHARBOR_PRIVATE_ALL } from '@/lib/partnerLinks';
 
 export const metadata: Metadata = {
   title: 'Book Oahu Helicopter Tours',
@@ -23,13 +23,15 @@ export default function BookingsPage() {
             Book Your Oahu Helicopter Tour
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            <strong>Fastest path:</strong> use the FareHarbor button above for Honolulu Helicopter Tours — live seats, instant checkout.
-            Prefer Blue Hawaiian? Submit the form below and we&apos;ll confirm availability and email your reference code.
+            Submit your Blue Hawaiian request below. We&apos;ll confirm availability and email your reference code; nothing is booked until the operator confirms it.
           </p>
-        </div>
-
-        <div className="mb-10 -mt-2">
-          <HonoluluPartnerCard />
+          <a
+            href={FAREHARBOR_PRIVATE_ALL}
+            className="fareharbor-lightframe mt-6 inline-flex min-h-12 items-center justify-center rounded-xl bg-amber-400 px-6 py-3 font-extrabold text-slate-950 shadow-sm transition hover:bg-amber-300 focus:outline-none focus:ring-4 focus:ring-amber-200"
+          >
+            Book Private Helicopter Here
+          </a>
+          <p className="mt-3 text-sm text-gray-500">Want a private, non-shared flight with live availability? This opens the FareHarbor booking window.</p>
         </div>
 
         <div className="max-w-3xl mx-auto mb-12 rounded-xl border border-blue-200 bg-blue-50/80 px-5 py-6 text-center text-gray-800">
