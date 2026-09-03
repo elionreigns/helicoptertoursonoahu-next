@@ -7,6 +7,7 @@ import { generateCustomerToken } from '@/lib/securePayment';
 import { sendConfirmationToCustomer, sendInternalBookingAlert, sendClientInteractionAlert } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
+import { isBlueHawaiianLeadRoutingEnabled } from '@/lib/blueHawaiianLeadRouting';
 
 export const maxDuration = 30;
 
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
     }
     const operatorKey: 'blueHawaiian' | 'rainbow' = 'blueHawaiian';
     const operator = operators[operatorKey];
+    const leadRoutingEnabled = isBlueHawaiianLeadRoutingEnabled();
 
     // Get tour information for pricing and display
     let tourName: string | undefined;
@@ -113,31 +115,27 @@ export async function POST(request: NextRequest) {
       availableSlots?: Array<{ time: string; price?: number; available: boolean }>;
     } | null = null;
     
-    try {
-      console.log(`Checking availability for ${operatorKey} on ${validated.preferred_date}...`);
-      availabilityResult = await checkAvailability({
-        operator: operatorKey,
-        date: validated.preferred_date,
-        partySize: validated.party_size,
-        tourName: validated.tour_name,
-        timeWindow: validated.time_window,
-      });
-      
-      console.log('Availability check result:', availabilityResult);
-      
-      // For Blue Hawaiian: if multiple slots available, we could return them to user
-      // For now, we'll proceed and include availability in email to operator
-      if (availabilityResult.available && availabilityResult.availableSlots) {
-        console.log(`Found ${availabilityResult.availableSlots.length} available time slots`);
+    if (leadRoutingEnabled) {
+      try {
+        console.log(`Checking availability for ${operatorKey} on ${validated.preferred_date}...`);
+        availabilityResult = await checkAvailability({
+          operator: operatorKey,
+          date: validated.preferred_date,
+          partySize: validated.party_size,
+          tourName: validated.tour_name,
+          timeWindow: validated.time_window,
+        });
+        console.log('Availability check result:', availabilityResult);
+      } catch (error) {
+        console.error('Error checking availability (non-blocking):', error);
+        availabilityResult = {
+          available: false,
+          error: error instanceof Error ? error.message : 'Unknown error',
+          source: 'error',
+        };
       }
-    } catch (error) {
-      console.error('Error checking availability (non-blocking):', error);
-      // Don't fail the booking if availability check fails
-      availabilityResult = {
-        available: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        source: 'error',
-      };
+    } else {
+      console.log('Blue Hawaiian lead routing is disabled; skipping automated availability lookup.');
     }
 
     // Optional payment: last 4 + name + billing only on form; full card via secure link in email
@@ -294,7 +292,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call n8n webhook if configured
-    if (process.env.N8N_NEW_BOOKING_WEBHOOK_URL) {
+    if (leadRoutingEnabled && process.env.N8N_NEW_BOOKING_WEBHOOK_URL) {
       try {
         const webhookResponse = await fetch(process.env.N8N_NEW_BOOKING_WEBHOOK_URL, {
           method: 'POST',
@@ -311,6 +309,8 @@ export async function POST(request: NextRequest) {
         console.error('n8n webhook error:', error);
         // Don't fail the booking if webhook fails
       }
+    } else if (!leadRoutingEnabled) {
+      console.log('Blue Hawaiian lead routing is disabled; skipping n8n handoff.');
     } else {
       console.warn('N8N_NEW_BOOKING_WEBHOOK_URL not configured, skipping webhook call');
     }
@@ -378,9 +378,13 @@ export async function POST(request: NextRequest) {
       }
     };
 
-    triggerAvailabilityCheck(availabilityCheckUrl).catch((err) => {
-      console.error('Background availability check failed after retries:', err);
-    });
+    if (leadRoutingEnabled) {
+      triggerAvailabilityCheck(availabilityCheckUrl).catch((err) => {
+        console.error('Background availability check failed after retries:', err);
+      });
+    } else {
+      console.log('Blue Hawaiian lead routing is disabled; lead captured for manual review only.');
+    }
 
     return NextResponse.json({
       success: true,

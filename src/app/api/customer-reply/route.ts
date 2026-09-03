@@ -5,6 +5,7 @@ import type { BookingsRow, BookingsUpdate, BookingsInsert } from '@/lib/database
 import { bookingStatuses, operators, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { analyzeEmail, analyzeCustomerAvailabilityReply } from '@/lib/openai';
 import { sendEmail, sendBookingRequestToOperator, sendRainbowFinalConfirmation } from '@/lib/email';
+import { isBlueHawaiianLeadRoutingEnabled } from '@/lib/blueHawaiianLeadRouting';
 import type { RainbowIsland } from '@/lib/email';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 import { generateOperatorToken } from '@/lib/securePayment';
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
           operatorProposedTime &&
           (availabilityReply.confirmsProposedTime || replyHasPaymentOrDetails));
 
-      if (shouldSendToOperator) {
+      if (shouldSendToOperator && isBlueHawaiianLeadRoutingEnabled()) {
         const tourId = (prevMeta.tour_id as string) || (prevMeta.tour_name as string);
         const tour = tourId ? getTourById(tourId) : undefined;
         const tourName = (prevMeta.tour_name as string) || tour?.name || 'Helicopter Tour';
@@ -255,6 +256,8 @@ export async function POST(request: NextRequest) {
         } catch (err) {
           console.error('Error sending booking to operator:', err);
         }
+      } else if (shouldSendToOperator) {
+        console.log('Blue Hawaiian lead routing is disabled; retaining customer reply for manual operator follow-up.');
       }
     }
 

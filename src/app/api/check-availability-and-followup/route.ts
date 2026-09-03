@@ -6,6 +6,7 @@ import { getBookingByRefCode, updateBooking } from '@/lib/supabaseClient';
 import { generateCustomerToken } from '@/lib/securePayment';
 import { bookingStatuses, emails, isOperatorOrInternalEmail, VAPI_PHONE_NUMBER, BOOKING_APP_BASE_URL } from '@/lib/constants';
 import { getTourById } from '@/lib/tours';
+import { isBlueHawaiianLeadRoutingEnabled } from '@/lib/blueHawaiianLeadRouting';
 
 const requestSchema = z.object({
   bookingId: z.string().uuid().optional(),
@@ -25,6 +26,13 @@ const requestSchema = z.object({
  * 4. Updates booking status and metadata
  */
 export async function POST(request: NextRequest) {
+  if (!isBlueHawaiianLeadRoutingEnabled()) {
+    return NextResponse.json(
+      { success: false, error: 'Blue Hawaiian lead routing is disabled; lead remains queued for manual review.' },
+      { status: 503 }
+    );
+  }
+
   try {
     const body = await request.json();
     const validated = requestSchema.parse(body);
