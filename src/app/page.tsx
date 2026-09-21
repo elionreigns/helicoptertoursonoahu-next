@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section: video background (gradient fallback until video loads) */}
-      <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800">
+      <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-[#0B1F33]">
         <video
           className="absolute inset-0 w-full h-full object-cover z-0"
           autoPlay
@@ -30,40 +30,40 @@ export default function Home() {
         >
           <source src="https://www.helicoptertoursonoahu.com/video/helicopterpromo.mp4" type="video/mp4" />
         </video>
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-900/50 via-blue-800/40 to-indigo-900/50 z-[1]" aria-hidden />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-[#0B1F33]/70 z-[1]" aria-hidden />
         <div className="container mx-auto max-w-4xl text-center relative z-10 text-white">
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight drop-shadow-sm">
             Helicopter Tours on Oahu — Book Now
           </h1>
-          <p className="text-lg md:text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-white/85 mb-8 max-w-2xl mx-auto">
             Safe • Scenic • Personalized with Blue Hawaiian Helicopters
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-10 text-base md:text-lg">
             <span className="inline-flex items-center">
-              <span className="w-2 h-2 rounded-full bg-green-400 mr-2" aria-hidden />
+              <span className="w-2 h-2 rounded-full bg-emerald-400/90 mr-2" aria-hidden />
               Safe
             </span>
-            <span className="text-blue-300">•</span>
+            <span className="text-white/50">•</span>
             <span className="inline-flex items-center">
               <span className="w-2 h-2 rounded-full bg-blue-300 mr-2" aria-hidden />
               Scenic
             </span>
-            <span className="text-blue-300">•</span>
+            <span className="text-white/50">•</span>
             <span className="inline-flex items-center">
-              <span className="w-2 h-2 rounded-full bg-orange-300 mr-2" aria-hidden />
+              <span className="w-2 h-2 rounded-full bg-[#B8956A] mr-2" aria-hidden />
               Personalized
             </span>
           </div>
           <div className="mb-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
             <Link
               href="/bookings"
-              className="inline-block min-h-[48px] rounded-xl bg-orange-500 px-8 py-4 text-lg font-semibold text-white shadow-xl transition-all hover:-translate-y-0.5 hover:bg-orange-600 hover:shadow-2xl focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-offset-2 focus:ring-offset-blue-700"
+              className="inline-block min-h-[48px] rounded-full bg-white px-8 py-4 text-lg font-semibold text-[#0B1F33] shadow-lg transition-all hover:bg-[#F4F6F8] focus:outline-none focus:ring-2 focus:ring-white/60"
             >
               Start Booking
             </Link>
             <a
               href={FAREHARBOR_PRIVATE_ALL}
-              className="fareharbor-lightframe inline-flex min-h-[48px] items-center justify-center rounded-xl border-2 border-white/35 bg-amber-400 px-6 py-4 text-center text-base font-extrabold text-slate-950 shadow-lg transition hover:bg-amber-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-200 sm:text-lg"
+              className="fareharbor-lightframe inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/40 bg-transparent px-6 py-4 text-center text-base font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 sm:text-lg"
             >
               Book Private Helicopter Here
             </a>
@@ -113,7 +113,7 @@ export default function Home() {
             <div className="overflow-x-auto px-4 sm:px-6 py-1">
               <table className="w-full min-w-[280px]">
                 <thead>
-                  <tr className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                  <tr className="bg-[#0B1F33] text-white">
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-left font-semibold text-sm sm:text-base">Feature</th>
                     <th className="px-4 sm:px-6 py-3 sm:py-4 text-left font-semibold text-sm sm:text-base">Blue Hawaiian</th>
                   </tr>
@@ -143,7 +143,7 @@ export default function Home() {
           <div className="text-center mt-10">
             <Link
               href="/bookings"
-              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-block bg-[#0B1F33] hover:bg-[#3D6F94] text-white px-8 py-3 rounded-full font-semibold shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-[#3D6F94] focus:ring-offset-2"
             >
               Book Your Tour Now
             </Link>
@@ -152,10 +152,10 @@ export default function Home() {
       </section>
 
       {/* Bottom CTA */}
-      <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12 md:py-16">
+      <section className="bg-[#0B1F33] text-white py-12 md:py-16">
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Fly?</h2>
-          <p className="text-blue-100 text-lg mb-6 max-w-xl mx-auto">
+          <p className="text-white/85 text-lg mb-6 max-w-xl mx-auto">
             Choose your date, party size, and tour. We&apos;ll confirm availability with Blue Hawaiian and send you a reference code.
           </p>
           <Link

@@ -1,8 +1,17 @@
 @import "tailwindcss";
 
+/* hto-premium-tokens 2026-09-20 */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --hto-navy: #0B1F33;
+  --hto-ink: #1A2332;
+  --hto-sky: #3D6F94;
+  --hto-mist: #F4F6F8;
+  --hto-sand: #B8956A;
+  --hto-white: #FFFFFF;
+  --hto-border: rgba(11, 31, 51, 0.12);
+  --hto-muted: #5A6570;
+  --background: #F4F6F8;
+  --foreground: #1A2332;
 }
 
 @theme inline {
@@ -14,8 +23,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0B1F33;
+    --foreground: #F4F6F8;
   }
 }
 
@@ -23,29 +32,16 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* FareHarbor CTA pulse — Honolulu partner card (matches marketing site) */
-@keyframes htoFhGlow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 0 rgba(255, 193, 7, 0.45),
-      0 14px 40px rgba(13, 71, 161, 0.4);
-  }
-  50% {
-    box-shadow:
-      0 0 0 10px rgba(255, 193, 7, 0),
-      0 18px 48px rgba(13, 71, 161, 0.5);
-  }
+h1, h2, h3 {
+  -webkit-text-stroke: 0 !important;
+  text-shadow: none;
+  color: var(--hto-navy);
+  letter-spacing: -0.02em;
 }
 
-.hto-fh-cta-animate {
-  animation: htoFhGlow 2.8s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hto-fh-cta-animate {
-    animation: none;
-  }
+.bg-blue-600, .bg-sky-500, .bg-cyan-500 {
+  background-color: var(--hto-navy) !important;
 }
