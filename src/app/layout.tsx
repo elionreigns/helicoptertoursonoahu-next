@@ -82,10 +82,13 @@ export default function RootLayout({
         <WhatsAppFloat />
         <BookingChatbot />
         <Script src="https://fareharbor.com/embeds/api/v1/?autolightframe=yes" strategy="afterInteractive" />
+        {/* First-party, cookie-free visitor analytics (Zion Tracker, coralcrownsolutions.com/tracker). Opt out: ?zt_optout=1 */}
+        <Script src="https://www.coralcrownsolutions.com/tracker/assets/zt.js" data-site="hto-booking" strategy="afterInteractive" />
         {/* Fixed Home Button - positioned above chatbot */}
         <div className="fixed bottom-28 right-6 z-40">
           <Link
             href="https://helicoptertoursonoahu.com"
+            aria-label="Home"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center space-x-2 font-semibold"
           >
             <svg

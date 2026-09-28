@@ -35,11 +35,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-h1, h2, h3 {
-  -webkit-text-stroke: 0 !important;
-  text-shadow: none;
-  color: var(--hto-navy);
-  letter-spacing: -0.02em;
+/* Base layer so Tailwind utilities (text-white, text-gray-900, ...) can still override heading color. */
+@layer base {
+  h1, h2, h3 {
+    -webkit-text-stroke: 0 !important;
+    text-shadow: none;
+    color: var(--hto-navy);
+    letter-spacing: -0.02em;
+  }
+  /* Headings inside dark sections (.text-white wrappers) inherit white instead of navy-on-navy. */
+  .text-white h1, .text-white h2, .text-white h3 {
+    color: inherit;
+  }
 }
 
 .bg-blue-600, .bg-sky-500, .bg-cyan-500 {

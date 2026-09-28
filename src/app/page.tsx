@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen">
+    <main className="min-h-screen">
       {/* Hero Section: video background (gradient fallback until video loads) */}
       <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-[#0B1F33]">
         <video
@@ -32,7 +32,7 @@ export default function Home() {
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-[#0B1F33]/70 z-[1]" aria-hidden />
         <div className="container mx-auto max-w-4xl text-center relative z-10 text-white">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight drop-shadow-sm">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">
             Helicopter Tours on Oahu — Book Now
           </h1>
           <p className="text-lg md:text-xl text-white/85 mb-8 max-w-2xl mx-auto">
@@ -154,18 +154,18 @@ export default function Home() {
       {/* Bottom CTA */}
       <section className="bg-[#0B1F33] text-white py-12 md:py-16">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Fly?</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">Ready to Fly?</h2>
           <p className="text-white/85 text-lg mb-6 max-w-xl mx-auto">
             Choose your date, party size, and tour. We&apos;ll confirm availability with Blue Hawaiian and send you a reference code.
           </p>
           <Link
             href="/bookings"
-            className="inline-block bg-orange-500 hover:bg-orange-600 text-white px-10 py-4 rounded-xl text-lg font-semibold shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5"
+            className="inline-block bg-[#C2410C] hover:bg-[#9A3412] text-white px-10 py-4 rounded-xl text-lg font-semibold shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5"
           >
             Start Booking
           </Link>
         </div>
       </section>
-    </div>
+    </main>
   );
 }

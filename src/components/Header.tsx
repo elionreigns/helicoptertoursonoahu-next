@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { CUSTOMER_PHONE_DISPLAY, CUSTOMER_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
+import WhatsAppIcon from './WhatsAppIcon';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -20,6 +21,8 @@ export default function Header() {
               <img
                 src="https://www.helicoptertoursonoahu.com/video/helicopter-tours-motion.gif"
                 alt=""
+                width={560}
+                height={192}
                 className="h-8 w-auto max-w-[90px] object-contain md:h-10 md:max-w-[110px]"
               />
               <span className="text-lg md:text-xl font-semibold text-white">
@@ -50,7 +53,7 @@ export default function Header() {
             </Link>
             <a
               href={CUSTOMER_PHONE_TEL}
-              className="flex items-center space-x-2 text-sm text-[#0B1F33] hover:text-[#3D6F94] font-medium transition-colors"
+              className="flex items-center space-x-2 text-sm text-white/90 hover:text-white font-medium transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
@@ -61,12 +64,11 @@ export default function Header() {
               href={WHATSAPP_CHAT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center space-x-2 text-sm text-green-700 hover:text-green-800 font-medium transition-colors"
+              className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-semibold text-[#0B1F33] hover:bg-[#3BE07A] transition-colors"
               title="WhatsApp"
+              aria-label="WhatsApp"
             >
-              <span className="text-lg" aria-hidden>
-                💬
-              </span>
+              <WhatsAppIcon className="w-4 h-4" />
               <span className="hidden lg:inline">WhatsApp</span>
             </a>
           </nav>
@@ -74,8 +76,9 @@ export default function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-md text-white hover:bg-white/10 transition-colors"
+            className="md:hidden p-3 rounded-md text-white hover:bg-white/10 transition-colors"
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? (
               <svg
@@ -136,7 +139,7 @@ export default function Header() {
               </Link>
               <a
                 href={CUSTOMER_PHONE_TEL}
-                className="px-4 py-2 text-sm text-[#0B1F33] hover:text-[#3D6F94] font-medium flex items-center space-x-2"
+                className="px-4 py-2 text-white/90 hover:bg-white/10 rounded-md font-medium flex items-center space-x-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -148,10 +151,10 @@ export default function Header() {
                 href={WHATSAPP_CHAT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2 text-sm text-green-700 hover:text-green-800 font-medium flex items-center space-x-2"
+                className="mx-4 inline-flex w-fit items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 font-semibold text-[#0B1F33] hover:bg-[#3BE07A]"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <span aria-hidden>💬</span>
+                <WhatsAppIcon className="w-5 h-5" />
                 <span>WhatsApp</span>
               </a>
             </nav>

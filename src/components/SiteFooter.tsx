@@ -20,7 +20,7 @@ export default function SiteFooter() {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-[#075e54] font-bold text-sm md:text-base shadow-md hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#128c7e]"
-            aria-label="Open WhatsApp chat, plus one eight zero eight three nine three zero one five three"
+            aria-label={`WhatsApp +1 ${WHATSAPP_PHONE_DISPLAY}`}
           >
             <WhatsAppIcon className="w-6 h-6 shrink-0" />
             <span>WhatsApp +1 {WHATSAPP_PHONE_DISPLAY}</span>
