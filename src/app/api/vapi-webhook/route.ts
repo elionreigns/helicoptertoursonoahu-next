@@ -47,14 +47,24 @@ export async function GET() {
     ok: true,
     path: '/api/vapi-webhook',
     method: 'POST',
-    description: 'VAPI end-of-call webhook; alerts on every completed call; forwards bookings to /api/new-booking-request',
+    description: 'VAPI end-of-call webhook; forwards bookings to /api/new-booking-request; sends a lead alert only when VAPI_ALERTS_ENABLED=true',
     secretConfigured: Boolean(process.env.VAPI_WEBHOOK_SECRET?.trim()),
+    alertsEnabled: vapiAlertsEnabled(),
   });
 }
 
 function asString(value: unknown): string | undefined {
   if (value == null) return undefined;
   return typeof value === 'string' ? value : String(value);
+}
+
+/**
+ * Master switch for outbound lead-alert emails.
+ * Default OFF: alerts are sent only when VAPI_ALERTS_ENABLED === 'true'.
+ * Prevents accidental email floods; flip it on deliberately in Vercel.
+ */
+function vapiAlertsEnabled(): boolean {
+  return (process.env.VAPI_ALERTS_ENABLED ?? '').trim().toLowerCase() === 'true';
 }
 
 export async function POST(request: NextRequest) {
@@ -75,6 +85,7 @@ export async function POST(request: NextRequest) {
     error: 'Internal server error',
   };
   let httpStatus = 500;
+  let isAlertableCallEnd = false;
 
   try {
     const webhookSecret = process.env.VAPI_WEBHOOK_SECRET?.trim();
@@ -110,6 +121,11 @@ export async function POST(request: NextRequest) {
     const call = validated.message.call;
     const transcript = validated.message.transcript;
     const conversation = validated.message.conversation;
+
+    // Alert email fires ONLY on the single terminal end-of-call-report event.
+    // Status-update events ("ringing", "in-progress") also carry a conversation
+    // and previously produced one duplicate alert each (flood).
+    isAlertableCallEnd = eventType === 'end-of-call-report';
 
     const isCallEnded = call?.status === 'ended' ||
                        call?.status === 'ended-by-customer' ||
@@ -211,7 +227,7 @@ export async function POST(request: NextRequest) {
           };
         } else {
           // Blue Hawaiian only — Rainbow bookings paused
-          const operatorKey: 'blueHawaiian' = 'blueHawaiian';
+          const operatorKey = 'blueHawaiian' as const;
 
           const baseUrl = process.env.NEXT_PUBLIC_APP_URL
             || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
@@ -310,7 +326,7 @@ export async function POST(request: NextRequest) {
     };
     httpStatus = 500;
   } finally {
-    if (fullTranscript.trim()) {
+    if (vapiAlertsEnabled() && isAlertableCallEnd && fullTranscript.trim()) {
       try {
         const alertResult = await sendClientInteractionAlert({
           source: 'vapi',
