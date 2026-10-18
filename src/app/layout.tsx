@@ -8,6 +8,7 @@ import BookingChatbot from "@/components/BookingChatbot";
 import JsonLd from "@/components/JsonLd";
 import SiteFooter from "@/components/SiteFooter";
 import WhatsAppFloat from "@/components/WhatsAppFloat";
+import { StickyBookBar } from "@/components/BookingCTAs";
 import { CUSTOMER_PHONE_DISPLAY } from "@/lib/constants";
 
 const inter = Inter({
@@ -80,12 +81,30 @@ export default function RootLayout({
         <div className="flex-1 flex flex-col">{children}</div>
         <SiteFooter />
         <WhatsAppFloat />
+        <StickyBookBar />
         <BookingChatbot />
         <Script src="https://fareharbor.com/embeds/api/v1/?autolightframe=yes" strategy="afterInteractive" />
         {/* First-party, cookie-free visitor analytics (Zion Tracker, coralcrownsolutions.com/tracker). Opt out: ?zt_optout=1 */}
         <Script src="https://www.coralcrownsolutions.com/tracker/assets/zt.js" data-site="hto-booking" strategy="afterInteractive" />
+        {/* GA4 (same property as main site) + cross-domain + private-flight click events */}
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-1Q9R7TG1XN" strategy="afterInteractive" />
+        <Script id="ga4-hto" strategy="afterInteractive">{`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-1Q9R7TG1XN', { linker: { domains: ['helicoptertoursonoahu.com', 'www.helicoptertoursonoahu.com', 'booking.helicoptertoursonoahu.com', 'fareharbor.com'] } });
+          document.addEventListener('click', function (e) {
+            var a = e.target && e.target.closest && e.target.closest('a[href]');
+            if (!a) return;
+            var h = a.href || '', t = (a.textContent || '').trim().slice(0, 80);
+            if (/fareharbor\\.com/i.test(h)) gtag('event', 'private_flight_click', { cta_text: t, cta_id: a.getAttribute('data-cta') || '', site: 'booking' });
+            else if (/wa\\.me|whatsapp/i.test(h)) gtag('event', 'contact_click', { contact_method: 'whatsapp', site: 'booking' });
+            else if (/^tel:/i.test(h)) gtag('event', 'contact_click', { contact_method: 'phone', site: 'booking' });
+            else if (/\\/bookings$/.test(h)) gtag('event', 'booking_request_click', { cta_text: t, site: 'booking' });
+          }, true);
+        `}</Script>
         {/* Fixed Home Button - positioned above chatbot */}
-        <div className="fixed bottom-28 right-6 z-40">
+        <div className="hidden sm:block fixed bottom-28 right-6 z-40">
           <Link
             href="https://helicoptertoursonoahu.com"
             aria-label="Home"

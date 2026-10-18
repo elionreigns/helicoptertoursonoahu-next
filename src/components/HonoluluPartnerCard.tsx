@@ -1,4 +1,4 @@
-import { fareHarborDirectUrl } from "@/lib/partnerLinks";
+import { FAREHARBOR_PRIVATE_18, FAREHARBOR_PRIVATE_30, FAREHARBOR_PRIVATE_60, fareHarborDirectUrl } from "@/lib/partnerLinks";
 
 type Props = {
   /** Slightly tighter vertical rhythm on /bookings */
@@ -28,20 +28,18 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
           Partner spotlight
         </p>
         <h2 className="mx-auto mb-2 max-w-3xl text-center text-2xl font-black leading-tight text-slate-900 md:text-4xl md:leading-tight">
-          Same sky. Two doors in.
+          Private helicopter tours on Oʻahu
           <span className="mt-1 block text-xl font-bold text-orange-600 md:text-2xl">
-            This one opens onto{" "}
+            with{" "}
             <span className="text-sky-900 underline decoration-orange-400 decoration-2 underline-offset-4">
-              FareHarbor
+              Oahu Helicopter Tours
             </span>{" "}
-            — live rotor times.
+            — live FareHarbor availability.
           </span>
         </h2>
         <p className="mx-auto mb-8 max-w-2xl text-center text-balance text-base text-slate-600 md:text-lg">
-          <strong className="text-slate-800">Honolulu Helicopter Tours</strong> keeps shared Oʻahu scenic flights on a{" "}
-          <strong className="text-slate-800">wide-open calendar</strong>: see what&apos;s flying, lock the seats, checkout
-          like a headline show — <em className="text-slate-700">instant confirmation</em> while you&apos;re still
-          daydreaming about Diamond Head from 1,000 feet.
+          Choose a private 18-, 30-, or 60-minute Oʻahu photo flight. See the live calendar and complete your reservation
+          without leaving the site.
         </p>
 
         <div className="overflow-hidden rounded-3xl border-2 border-amber-300/70 bg-gradient-to-br from-amber-50/90 via-sky-50/80 to-white shadow-[0_24px_60px_-12px_rgba(13,71,161,0.2)] ring-1 ring-white/80 md:flex md:min-h-[280px]">
@@ -55,7 +53,7 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
             aria-label="Helicopter aerial view over Honolulu"
           >
             <div className="absolute bottom-3 left-3 right-3 rounded-xl bg-slate-950/75 px-3 py-2.5 text-sm font-semibold leading-snug text-white backdrop-blur-sm md:bottom-4 md:left-4 md:right-4 md:px-4">
-              Diamond Head • Windward ridges • City–coast panorama — shared cabin, big windows, camera-ready.
+              Diamond Head • Waikīkī • Honolulu Harbor — private, photo-focused, camera-ready.
             </div>
           </div>
 
@@ -63,8 +61,8 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
             <span className="mb-2 inline-flex w-fit items-center rounded-full border border-sky-800/25 bg-gradient-to-r from-amber-200 to-yellow-200 px-3 py-1 text-[0.7rem] font-extrabold uppercase tracking-[0.16em] text-sky-950">
               Live Aloha calendar
             </span>
-            <h3 className="text-2xl font-black tracking-tight text-sky-950 md:text-3xl">Honolulu Helicopter Tours</h3>
-            <p className="mt-1 text-base font-semibold text-slate-700">The &ldquo;I can&apos;t wait till Monday&rdquo; button lives here.</p>
+            <h3 className="text-2xl font-black tracking-tight text-sky-950 md:text-3xl">Oahu Helicopter Tours</h3>
+            <p className="mt-1 text-base font-semibold text-slate-700">Private. Non-shared. Live availability.</p>
 
             <div className="my-3 flex flex-wrap gap-2" aria-label="Tour length options">
               {["~18 min sprint", "~30 min classic", "~60 min epic"].map((label) => (
@@ -78,13 +76,12 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
             </div>
 
             <p className="text-sm leading-relaxed text-slate-700 md:text-base">
-              Ballpark <strong>from ~$244 / person (30 min)</strong> toward <strong>~$356+ / person (60 min)</strong> when
-              those longer minutes are listed — party size and season move the numbers on their grid.{" "}
-              <strong>Always confirm on FareHarbor</strong> before you brag to the group chat.
+              Your party flies privately, with an extra vacant seat for added room and privacy. Choose a duration to see the
+              current calendar and price directly on FareHarbor.
             </p>
             <p className="mt-2 text-sm text-slate-600">
-              Separate from the Blue Hawaiian request flow — this is{" "}
-              <strong className="text-slate-800">self-serve, real-time, checkout tonight</strong> energy.
+              Blue Hawaiian shared flights use the request form below. This private route is{" "}
+              <strong className="text-slate-800">self-serve, live availability, direct checkout</strong>.
             </p>
 
             <a
@@ -92,10 +89,15 @@ export default function HonoluluPartnerCard({ className = "" }: Props) {
               data-fh-src="booking-card"
               data-fh-book="1"
               className="hto-fh-cta-animate mt-5 inline-flex w-full max-w-md items-center justify-center gap-2 rounded-2xl border-2 border-white/40 bg-gradient-to-r from-orange-500 via-orange-600 to-sky-800 px-5 py-4 text-center text-base font-extrabold text-white shadow-[0_14px_40px_rgba(255,109,0,0.35),0_8px_24px_rgba(21,101,192,0.35)] transition hover:-translate-y-0.5 hover:brightness-105 focus:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 md:text-lg"
-              aria-label="Open FareHarbor to book Honolulu Helicopter Tours with live availability"
+              aria-label="Open FareHarbor to book a private Oahu Helicopter Tours flight with live availability"
             >
-              <span aria-hidden>🎟️</span> Claim my seats on FareHarbor
+              <span aria-hidden>🎟️</span> Book a private flight on FareHarbor
             </a>
+            <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs font-bold">
+              <a href={FAREHARBOR_PRIVATE_18} className="rounded-lg border border-sky-200 bg-white px-2 py-2 text-sky-900 hover:bg-sky-50">Private 18 min</a>
+              <a href={FAREHARBOR_PRIVATE_30} className="rounded-lg border border-sky-200 bg-white px-2 py-2 text-sky-900 hover:bg-sky-50">Private 30 min</a>
+              <a href={FAREHARBOR_PRIVATE_60} className="rounded-lg border border-sky-200 bg-white px-2 py-2 text-sky-900 hover:bg-sky-50">Private 60 min</a>
+            </div>
           </div>
         </div>
       </div>

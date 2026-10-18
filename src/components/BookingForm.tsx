@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { trackBookingEvent } from '@/lib/analytics';
 import { tours, getToursByOperator, calculateTotalPrice, type Tour } from '@/lib/tours';
 import { CUSTOMER_PHONE_DISPLAY } from '@/lib/constants';
 
@@ -63,8 +64,6 @@ export default function BookingForm() {
     if (!selectedTour) return 0;
     return calculateTotalPrice(selectedTour.id, formData.party_size);
   }, [selectedTour, formData.party_size]);
-
-  const [showPayment, setShowPayment] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState<{
@@ -145,21 +144,18 @@ export default function BookingForm() {
           special_requests: formData.special_requests,
           total_weight: formData.total_weight,
           source: 'web',
-          // Optional: last 4 digits + name + billing only; full card via secure link in confirmation email
-          ...(showPayment && (formData.card_name || formData.card_last4 || formData.billing_address || formData.billing_zip) && {
-            payment: {
-              card_name: formData.card_name || undefined,
-              card_last4: formData.card_last4?.replace(/\D/g, '').slice(0, 4) || undefined,
-              billing_address: formData.billing_address || undefined,
-              billing_zip: formData.billing_zip || undefined,
-            },
-          }),
         }),
       });
 
       const result = await response.json();
 
       if (result.success) {
+        trackBookingEvent('booking_request_submit', {
+          operator: formData.operator_preference || 'unspecified',
+          party_size: Number(formData.party_size) || 0,
+          doors_off_requested: Boolean(formData.doors_off),
+          has_tour_selection: Boolean(selectedTour?.name || formData.tour_name),
+        });
         const operatorDisplayName =
           formData.operator_preference === 'blueHawaiian'
             ? 'Blue Hawaiian Helicopters'
@@ -529,102 +525,6 @@ export default function BookingForm() {
             placeholder="Any special requests or additional information..."
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
-        </div>
-
-        {/* Optional Payment Information */}
-        <div className="border-t border-gray-200 pt-6 mt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Payment Information (Optional)</h3>
-            <button
-              type="button"
-              onClick={() => setShowPayment(!showPayment)}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-            >
-              {showPayment ? 'Hide' : 'Add Payment Info'}
-            </button>
-          </div>
-
-          {showPayment && (
-            <>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4 mb-4">
-                <div className="flex items-start">
-                  <svg className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                  <div className="text-sm text-yellow-800">
-                    <p className="font-semibold mb-1">Security Notice:</p>
-                    <p>We only collect last 4 digits and billing info here. After you submit, we&apos;ll send a secure link in your confirmation email where you can enter your full card details. Your full card number and CVC are never stored in our system or sent by email.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="card_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Name on Card
-                  </label>
-                  <input
-                    type="text"
-                    id="card_name"
-                    name="card_name"
-                    value={formData.card_name}
-                    onChange={handleChange}
-                    placeholder="John Doe"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="card_last4" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last 4 Digits of Card
-                  </label>
-                  <input
-                    type="text"
-                    id="card_last4"
-                    name="card_last4"
-                    value={formData.card_last4}
-                    onChange={handleChange}
-                    placeholder="3456"
-                    maxLength={4}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="billing_address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Billing Address
-                  </label>
-                  <input
-                    type="text"
-                    id="billing_address"
-                    name="billing_address"
-                    value={formData.billing_address}
-                    onChange={handleChange}
-                    placeholder="123 Main St, City, State"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="billing_zip" className="block text-sm font-medium text-gray-700 mb-1">
-                    ZIP Code
-                  </label>
-                  <input
-                    type="text"
-                    id="billing_zip"
-                    name="billing_zip"
-                    value={formData.billing_zip}
-                    onChange={handleChange}
-                    placeholder="12345"
-                    maxLength={10}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-            </>
-          )}
         </div>
 
         <button
