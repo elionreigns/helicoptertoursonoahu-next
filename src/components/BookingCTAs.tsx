@@ -12,7 +12,7 @@ type Tour = { id: string; minutes: number; name: string; href: string; blurb: st
 
 export const TOURS: Tour[] = [
   { id: '326050', minutes: 18, name: '18-Min Private Flight', href: FAREHARBOR_PRIVATE_18, blurb: 'Waikiki, Diamond Head & Honolulu skyline. Perfect first flight.' },
-  { id: '326066', minutes: 30, name: '30-Min Private Flight', href: FAREHARBOR_PRIVATE_30, blurb: 'More coastline, more views. The sweet spot for couples & families.', badge: 'Most popular' },
+  { id: '326066', minutes: 30, name: '30-Min Private Flight', href: FAREHARBOR_PRIVATE_30, blurb: 'More coastline, more views. The sweet spot for couples & families.', badge: 'Popular pick' },
   { id: '326071', minutes: 60, name: '60-Min Private Flight', href: FAREHARBOR_PRIVATE_60, blurb: 'The full Oahu experience. Mountains, waterfalls & coastlines.' },
 ];
 

@@ -437,7 +437,7 @@ export default function BookingChatbot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-1 hover:scale-110"
+          className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-50 w-14 h-14 md:w-16 md:h-16 bg-gradient-to-br from-[#4B2A7B] to-[#2A1240] ring-1 ring-[#F3D27A]/60 text-[#F3D27A] rounded-full shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center gap-1 hover:scale-110"
           aria-label="Open booking chat"
         >
           <span className="text-2xl">💬</span>
