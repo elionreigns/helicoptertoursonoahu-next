@@ -18,9 +18,21 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="min-h-screen">
-      {/* Hero Section: lightweight purple/gold gradient (heavy AI promo video removed per audit; swap in real operator footage when available) */}
-      <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-[#1A0B2E]">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(243,210,122,0.18),transparent_55%),radial-gradient(ellipse_at_bottom_right,rgba(124,58,237,0.35),transparent_60%)]" aria-hidden />
+      {/* Hero Section: original promo video background + dark overlay (same as production); solid fallback + poster until video loads */}
+      <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-[#0B1F33]">
+        <video
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          poster="/hero-poster.jpg"
+          aria-hidden
+        >
+          <source src="https://www.helicoptertoursonoahu.com/video/helicopterpromo.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-[#0B1F33]/70 z-[1]" aria-hidden />
         <div className="container mx-auto max-w-4xl text-center relative z-10 text-white">
           <p className="mb-4 inline-block rounded-full border border-[#F3D27A]/50 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#F3D27A]">Private flights · Honolulu, Oʻahu</p>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight !text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.5)]">
