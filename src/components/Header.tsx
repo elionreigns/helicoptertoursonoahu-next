@@ -4,12 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { CUSTOMER_PHONE_DISPLAY, CUSTOMER_PHONE_TEL, WHATSAPP_CHAT_URL } from '@/lib/constants';
 import WhatsAppIcon from './WhatsAppIcon';
+import { BookButton } from './BookingCTAs';
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <header className="bg-[#0B1F33] shadow-sm sticky top-0 z-50">
+    <header className="bg-gradient-to-r from-[#1A0B2E] via-[#2A1240] to-[#1A0B2E] border-b border-[#F3D27A]/25 shadow-lg sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo and Home Link */}
@@ -49,7 +50,7 @@ export default function Header() {
               href="/bookings"
               className="text-white/80 hover:text-white transition-colors font-medium"
             >
-              Book Now
+              Blue Hawaiian Request
             </Link>
             <a
               href={CUSTOMER_PHONE_TEL}
@@ -64,15 +65,17 @@ export default function Header() {
               href={WHATSAPP_CHAT_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full bg-[#25D366] px-3 py-1.5 text-sm font-semibold text-[#0B1F33] hover:bg-[#3BE07A] transition-colors"
+              className="inline-flex items-center gap-2 rounded-full border border-white/30 px-3 py-1.5 text-sm font-semibold text-white/90 hover:border-[#F3D27A] hover:text-[#F3D27A] transition-colors"
               title="WhatsApp"
               aria-label="WhatsApp"
             >
               <WhatsAppIcon className="w-4 h-4" />
               <span className="hidden lg:inline">WhatsApp</span>
             </a>
+            <BookButton tour={null} cta="header-desktop" className="!min-h-[42px] !px-5 !py-2 text-sm">Book Now</BookButton>
           </nav>
 
+          <div className="md:hidden ml-auto mr-1"><BookButton tour={null} cta="header-mobile" className="!min-h-[40px] !px-4 !py-2 text-sm">Book</BookButton></div>
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -135,7 +138,7 @@ export default function Header() {
                 className="px-4 py-2 text-white/90 hover:bg-white/10 rounded-md transition-colors font-medium"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Book Now
+                Blue Hawaiian Request
               </Link>
               <a
                 href={CUSTOMER_PHONE_TEL}
@@ -151,7 +154,7 @@ export default function Header() {
                 href={WHATSAPP_CHAT_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mx-4 inline-flex w-fit items-center gap-2 rounded-full bg-[#25D366] px-4 py-2 font-semibold text-[#0B1F33] hover:bg-[#3BE07A]"
+                className="mx-4 inline-flex w-fit items-center gap-2 rounded-full border border-white/30 px-4 py-2 font-semibold text-white hover:border-[#F3D27A]"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <WhatsAppIcon className="w-5 h-5" />

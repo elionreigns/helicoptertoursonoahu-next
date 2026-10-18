@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { trackBookingEvent } from '@/lib/analytics';
 
 interface BookingSuccessData {
   ref_code: string;
@@ -62,6 +63,16 @@ function BookingSuccessContent() {
 
     setLoading(false);
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!bookingData?.ref_code) return;
+    trackBookingEvent('generate_lead', {
+      lead_type: 'helicopter_booking_request',
+      operator: bookingData.operator || 'unspecified',
+      party_size: bookingData.party_size || 0,
+      doors_off_requested: Boolean(bookingData.doors_off),
+    });
+  }, [bookingData]);
 
   if (loading) {
     return (

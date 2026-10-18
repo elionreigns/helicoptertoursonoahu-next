@@ -15,7 +15,7 @@ const organizationSchema = {
   url: MAIN_SITE,
   logo: `${MAIN_SITE}/images/helicoptertours-bluehawaiian.webp`,
   description:
-    `Book Oahu helicopter tours instantly on FareHarbor (Honolulu Helicopter Tours) or request Blue Hawaiian Eco-Star flights at ${BASE_URL}. Call ${CUSTOMER_PHONE_DISPLAY}.`,
+    `Book private Oahu helicopter tours instantly through Oahu Helicopter Tours on FareHarbor, or request a Blue Hawaiian shared flight at ${BASE_URL}. Call ${CUSTOMER_PHONE_DISPLAY}.`,
   telephone: CUSTOMER_PHONE_SCHEMA,
   sameAs: [MAIN_SITE],
   contactPoint: {
@@ -64,7 +64,7 @@ const localBusinessSchema = {
   '@type': 'TouristAttraction',
   name: 'Helicopter Tours on Oahu',
   description:
-    'Oahu helicopter tours — instant FareHarbor booking with Honolulu Helicopter Tours or Blue Hawaiian Eco-Star requests. Call for help.',
+    'Oahu helicopter tours — direct private-tour booking with Oahu Helicopter Tours on FareHarbor, or Blue Hawaiian shared-flight requests. Call for help.',
   url: MAIN_SITE,
   telephone: CUSTOMER_PHONE_SCHEMA,
   address: {
@@ -84,17 +84,15 @@ const localBusinessSchema = {
   image: `${MAIN_SITE}/images/helicoptertours-bluehawaiian.webp`,
 };
 
-const honoluluProductSchema = {
+const privateOahuProductSchema = {
   '@context': 'https://schema.org',
   '@type': 'Product',
-  name: 'Honolulu Helicopter Tours — Oahu Scenic Flight',
-  description: 'Shared Oahu helicopter flights with live FareHarbor availability (18, 30, 60 min).',
-  brand: { '@type': 'Brand', name: 'Honolulu Helicopter Tours' },
+  name: 'Private Helicopter Tours with Oahu Helicopter Tours',
+  description: 'Private, non-shared Oahu helicopter tours with live FareHarbor availability (18, 30, and 60 minutes).',
+  brand: { '@type': 'Brand', name: 'Oahu Helicopter Tours' },
   offers: {
     '@type': 'AggregateOffer',
     priceCurrency: 'USD',
-    lowPrice: '244',
-    highPrice: '356',
     availability: 'https://schema.org/InStock',
     url: fareHarborTrackedOutboundUrl('schema-booking'),
   },
@@ -117,9 +115,9 @@ export default function JsonLd() {
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(honoluluProductSchema) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(privateOahuProductSchema) }}
       />
     </>
   );
 }
-
+

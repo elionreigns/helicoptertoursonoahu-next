@@ -1,15 +1,15 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { FAREHARBOR_PRIVATE_ALL } from '@/lib/partnerLinks';
+import { BookButton, TourCards, TrustLine } from '@/components/BookingCTAs';
 import { CUSTOMER_PHONE_DISPLAY } from '@/lib/constants';
 
 export const metadata: Metadata = {
-  title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours Online',
+  title: 'Private Oahu Helicopter Tours | Book 18, 30 or 60-Min Flights',
   description:
-    'Book helicopter tours on Oahu with Blue Hawaiian Helicopters. Luxury Eco-Star scenic flights—Oahu, Maui, Kauai, Big Island. Safe, scenic Hawaii helicopter tours—book online.',
+    'Private Oahu helicopter tours from Honolulu: your party flies alone. Pick 18, 30 or 60 minutes, see live dates and prices, and book online. Shared Blue Hawaiian requests also available.',
   openGraph: {
-    title: 'Helicopter Tours on Oahu | Book Oahu Helicopter Tours',
-    description: `Book Oahu helicopter tours with Blue Hawaiian Helicopters. Scenic flights across Hawaii—book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
+    title: 'Private Oahu Helicopter Tours | Book 18, 30 or 60-Min Flights',
+    description: `Private Oahu helicopter flights from Honolulu. Book online or call ${CUSTOMER_PHONE_DISPLAY}.`,
     url: 'https://booking.helicoptertoursonoahu.com',
   },
   alternates: { canonical: 'https://booking.helicoptertoursonoahu.com' },
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="min-h-screen">
-      {/* Hero Section: video background (gradient fallback until video loads) */}
+      {/* Hero Section: original promo video background + dark overlay (same as production); solid fallback + poster until video loads */}
       <section className="relative overflow-hidden py-16 md:py-24 px-4 min-h-[60vh] flex items-center justify-center bg-[#0B1F33]">
         <video
           className="absolute inset-0 w-full h-full object-cover z-0"
@@ -26,50 +26,32 @@ export default function Home() {
           muted
           loop
           playsInline
+          preload="metadata"
+          poster="/hero-poster.jpg"
           aria-hidden
         >
           <source src="https://www.helicoptertoursonoahu.com/video/helicopterpromo.mp4" type="video/mp4" />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/40 to-[#0B1F33]/70 z-[1]" aria-hidden />
         <div className="container mx-auto max-w-4xl text-center relative z-10 text-white">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight text-white [text-shadow:0_2px_12px_rgba(0,0,0,0.45)]">
-            Helicopter Tours on Oahu — Book Now
+          <p className="mb-4 inline-block rounded-full border border-[#F3D27A]/50 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-[#F3D27A]">Private flights · Honolulu, Oʻahu</p>
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight !text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.5)]">
+            Private Oahu Helicopter Tours
           </h1>
           <p className="text-lg md:text-xl text-white/85 mb-8 max-w-2xl mx-auto">
-            Safe • Scenic • Personalized with Blue Hawaiian Helicopters
+            Your party flies alone · 18, 30 or 60 minutes · Live dates &amp; prices
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-10 text-base md:text-lg">
-            <span className="inline-flex items-center">
-              <span className="w-2 h-2 rounded-full bg-emerald-400/90 mr-2" aria-hidden />
-              Safe
-            </span>
-            <span className="text-white/50">•</span>
-            <span className="inline-flex items-center">
-              <span className="w-2 h-2 rounded-full bg-blue-300 mr-2" aria-hidden />
-              Scenic
-            </span>
-            <span className="text-white/50">•</span>
-            <span className="inline-flex items-center">
-              <span className="w-2 h-2 rounded-full bg-[#B8956A] mr-2" aria-hidden />
-              Personalized
-            </span>
-          </div>
-          <div className="mb-10 flex flex-col items-center justify-center gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
-            <Link
-              href="/bookings"
-              className="inline-block min-h-[48px] rounded-full bg-white px-8 py-4 text-lg font-semibold text-[#0B1F33] shadow-lg transition-all hover:bg-[#F4F6F8] focus:outline-none focus:ring-2 focus:ring-white/60"
-            >
-              Start Booking
-            </Link>
-            <a
-              href={FAREHARBOR_PRIVATE_ALL}
-              className="fareharbor-lightframe inline-flex min-h-[48px] items-center justify-center rounded-full border border-white/40 bg-transparent px-6 py-4 text-center text-base font-semibold text-white transition hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/50 sm:text-lg"
-            >
-              Book Private Helicopter Here
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+            <BookButton tour={null} cta="private-hero-primary" className="text-lg !px-9">Book Your Private Flight</BookButton>
+            <a href="#tours" className="inline-flex min-h-[52px] items-center justify-center rounded-full border-2 border-white/40 px-7 py-3 font-semibold text-white transition hover:border-[#F3D27A] hover:bg-white/10 active:scale-[0.97]">
+              Compare 18 / 30 / 60 min
             </a>
           </div>
+          <TrustLine />
         </div>
       </section>
+
+      <TourCards />
 
       {/* Trust Badges */}
       <section className="bg-white py-8 border-b border-gray-200 shadow-sm">
@@ -143,27 +125,28 @@ export default function Home() {
           <div className="text-center mt-10">
             <Link
               href="/bookings"
-              className="inline-block bg-[#0B1F33] hover:bg-[#3D6F94] text-white px-8 py-3 rounded-full font-semibold shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-[#3D6F94] focus:ring-offset-2"
+              className="inline-flex min-h-[48px] items-center rounded-full border-2 border-[#2A1240] px-8 py-3 font-semibold text-[#2A1240] transition-all hover:bg-[#2A1240] hover:text-white active:scale-[0.97] focus:outline-none focus-visible:ring-4 focus-visible:ring-[#7C3AED]/40"
             >
-              Book Your Tour Now
+              Request a shared Blue Hawaiian tour →
             </Link>
           </div>
         </div>
       </section>
 
       {/* Bottom CTA */}
-      <section className="bg-[#0B1F33] text-white py-12 md:py-16">
+      <section className="bg-gradient-to-br from-[#2A1240] to-[#1A0B2E] text-white py-14 md:py-20 pb-28 md:pb-20">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-4 text-white">Ready to Fly?</h2>
-          <p className="text-white/85 text-lg mb-6 max-w-xl mx-auto">
-            Choose your date, party size, and tour. We&apos;ll confirm availability with Blue Hawaiian and send you a reference code.
+          <h2 className="text-2xl md:text-4xl font-bold mb-4 !text-white">Ready to fly?</h2>
+          <p className="text-white/80 text-lg mb-8 max-w-xl mx-auto">
+            Pick your date and party size in the live calendar. Private flights confirm instantly.
           </p>
-          <Link
-            href="/bookings"
-            className="inline-block bg-[#C2410C] hover:bg-[#9A3412] text-white px-10 py-4 rounded-xl text-lg font-semibold shadow-xl hover:shadow-2xl transition-all hover:-translate-y-0.5"
-          >
-            Start Booking
-          </Link>
+          <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+            <BookButton tour={null} cta="private-bottom-primary" className="text-lg !px-10">Book Private Helicopter Tour</BookButton>
+            <Link href="/bookings" className="inline-flex min-h-[52px] items-center rounded-full border-2 border-white/40 px-7 py-3 font-semibold text-white transition hover:border-[#F3D27A] hover:bg-white/10 active:scale-[0.97]">
+              Shared Blue Hawaiian request
+            </Link>
+          </div>
+          <TrustLine />
         </div>
       </section>
     </main>

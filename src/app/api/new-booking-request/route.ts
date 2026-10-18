@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { insertBooking } from '@/lib/supabaseClient';
 import type { BookingsInsert } from '@/lib/database.types';
-import { operators, BOOKING_APP_BASE_URL } from '@/lib/constants';
+import { operators, emails, BOOKING_APP_BASE_URL, CUSTOMER_PHONE_DISPLAY } from '@/lib/constants';
 import { generateCustomerToken } from '@/lib/securePayment';
-import { sendConfirmationToCustomer, sendInternalBookingAlert, sendClientInteractionAlert } from '@/lib/email';
+import { sendEmail, sendConfirmationToCustomer, sendInternalBookingAlert, sendClientInteractionAlert } from '@/lib/email';
 import { checkAvailability } from '@/lib/browserAutomation';
 import { getTourById, calculateTotalPrice } from '@/lib/tours';
 import { isBlueHawaiianLeadRoutingEnabled } from '@/lib/blueHawaiianLeadRouting';
@@ -180,15 +180,77 @@ export async function POST(request: NextRequest) {
         tour_id: validated.tour_id ?? validated.tour_name ?? null, // Store tour ID for pricing lookup
       },
     };
-    const { data: booking, error: dbError } = await insertBooking(insertPayload);
+    const { data: booking, error: dbError } = await insertBooking(insertPayload).catch((e: unknown) => ({
+      data: null,
+      error: { message: e instanceof Error ? e.message : String(e), code: 'insert_threw' } as { message: string; code: string },
+    }));
 
     if (dbError || !booking) {
-      console.error('Database error:', dbError);
-      const details = dbError?.message ?? dbError?.code ?? null;
-      return NextResponse.json(
-        { success: false, error: 'Failed to create booking', details },
-        { status: 500 }
-      );
+      // Database unavailable (e.g. Supabase project paused/deleted). Don't lose the lead:
+      // deliver the full inquiry by email to the client-interaction inbox and confirm to the customer.
+      console.error('Database error, falling back to email-only inquiry:', dbError?.message ?? dbError?.code ?? dbError);
+      const esc = (v: unknown) =>
+        String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+      const rows: Array<[string, unknown]> = [
+        ['Reference', refCode],
+        ['Name', validated.name],
+        ['Email', validated.email],
+        ['Phone', validated.phone],
+        ['Party size', validated.party_size],
+        ['Preferred date', validated.preferred_date],
+        ['Time window', validated.time_window],
+        ['Tour', tourName ?? validated.tour_name],
+        ['Estimated total', totalPrice != null ? `$${totalPrice}` : undefined],
+        ['Doors off', validated.doors_off ? 'Yes' : 'No'],
+        ['Hotel', validated.hotel],
+        ['Total weight (lbs)', validated.total_weight],
+        ['Special requests', validated.special_requests],
+        ['Source', validated.source],
+        ['Operator', operator.name],
+      ];
+      const filled = rows.filter(([, v]) => v !== undefined && v !== null && v !== '');
+      const inquiry = await sendEmail({
+        to: emails.clientInteractionAlert,
+        replyTo: validated.email,
+        subject: `New booking inquiry ${refCode}: ${validated.name}, ${validated.preferred_date}, party ${validated.party_size}`,
+        text: filled.map(([k, v]) => `${k}: ${v}`).join('\n') + '\n\n(Saved by email only: booking database unavailable. Reply to this email to reach the customer.)',
+        html:
+          `<h2 style="font-family:sans-serif">New booking inquiry ${esc(refCode)}</h2>` +
+          `<table style="font-family:sans-serif;border-collapse:collapse">` +
+          filled.map(([k, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#64748b">${esc(k)}</td><td style="padding:4px 0"><strong>${esc(v)}</strong></td></tr>`).join('') +
+          `</table><p style="font-family:sans-serif;color:#64748b;font-size:12px">Sent from booking.helicoptertoursonoahu.com /bookings. Booking database unavailable, so this inquiry was delivered by email only. Reply to this email to reach the customer.</p>`,
+      });
+      if (!inquiry.success) {
+        console.error('Fallback inquiry email failed:', inquiry.error);
+        return NextResponse.json(
+          { success: false, error: `We couldn't submit your request right now. Please call ${CUSTOMER_PHONE_DISPLAY} or try again shortly.` },
+          { status: 503 }
+        );
+      }
+      try {
+        const confirmResult = await sendConfirmationToCustomer({
+          customerEmail: validated.email,
+          customerName: validated.name,
+          bookingDetails: {
+            operatorName: operator.name,
+            date: validated.preferred_date,
+            partySize: validated.party_size,
+            totalAmount: totalPrice,
+          },
+          confirmationNumber: refCode,
+          hasPayment: false,
+          tourName: tourName,
+        });
+        if (!confirmResult.success) console.error('Confirmation email failed (fallback):', confirmResult.error);
+      } catch (error) {
+        console.error('Error sending confirmation email (fallback):', error);
+      }
+      return NextResponse.json({
+        success: true,
+        ref_code: refCode,
+        message: 'Booking request received',
+        delivery: 'email',
+      });
     }
 
     // Prepare booking data for n8n webhook (include total_weight and availability result)
